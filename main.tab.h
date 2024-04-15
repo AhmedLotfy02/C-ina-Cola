@@ -46,7 +46,21 @@
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+typedef union YYSTYPE
+{
+
+/* Line 1676 of yacc.c  */
+#line 30 ".\\main.y"
+
+        int TYPE_INT; 
+        void* TYPE_VOID;
+        struct nodeType* TYPE_NODE;
+;
+
+
+/* Line 1676 of yacc.c  */
+#line 63 "main.tab.h"
+} YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

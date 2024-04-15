@@ -10,11 +10,9 @@ SPACE [ \r\t]
 NEW_LINE \n
 arithmeticOps   [/+*%-]
 %%
-
-
-{NEW_LINE}  ; /*ignore new lines and processed to the next line*/ 
+{NEW_LINE}  {return yytext[0];} /*ignore new lines and processed to the next line*/ 
 {SPACE}     ; /*ignore spaces*/
-{DIGIT}+ { yylval = atoi(yytext); return INTEGER;}
+{DIGIT}+ { yylval.TYPE_INT = atoi(yytext); return INTEGER;}
 {arithmeticOps} {return *yytext;} /*just return the operator*/
 .           yyerror("Unknown character");
 %%

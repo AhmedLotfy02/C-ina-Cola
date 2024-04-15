@@ -286,13 +286,13 @@ static void yy_fatal_error YY_PROTO(( yyconst char msg[] ));
 #define YY_END_OF_BUFFER 7
 static yyconst short int yy_accept[11] =
     {   0,
-        0,    0,    7,    5,    4,    3,    2,    1,    1,    0
+        0,    0,    7,    5,    2,    1,    4,    3,    3,    0
     } ;
 
 static yyconst int yy_ec[256] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    2,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    2,    1,    1,    1,    1,    4,    1,    1,    1,
         1,    4,    4,    1,    4,    1,    4,    5,    5,    5,
@@ -522,8 +522,7 @@ YY_DECL
 
 #line 12 ".\\main.l"
 
-
-#line 527 "lex.yy.c"
+#line 526 "lex.yy.c"
 
 	if ( yy_init )
 		{
@@ -608,38 +607,35 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 14 ".\\main.l"
-{
-                yylval = atoi(yytext);
-                return INTEGER;
-            }
+#line 13 ".\\main.l"
+{return yytext[0];} /*ignore new lines and processed to the next line*/ 
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 19 ".\\main.l"
-{ return *yytext; }
+#line 14 ".\\main.l"
+; /*ignore spaces*/
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 20 ".\\main.l"
-{return *yytext;}
+#line 15 ".\\main.l"
+{ yylval.TYPE_INT = atoi(yytext); return INTEGER;}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 21 ".\\main.l"
-;       /* skip whitespace */
+#line 16 ".\\main.l"
+{return *yytext;} /*just return the operator*/
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 23 ".\\main.l"
+#line 17 ".\\main.l"
 yyerror("Unknown character");
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 25 ".\\main.l"
+#line 18 ".\\main.l"
 ECHO;
 	YY_BREAK
-#line 643 "lex.yy.c"
+#line 639 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1525,7 +1521,7 @@ int main()
 	return 0;
 	}
 #endif
-#line 25 ".\\main.l"
+#line 18 ".\\main.l"
 
 
 int yywrap(void) {

@@ -70,13 +70,34 @@
 /* Line 189 of yacc.c  */
 #line 1 ".\\main.y"
 
-    #include <stdio.h>  
+    #include <stdio.h>     
+    #include <stdlib.h>
+    #include <ctype.h>
+    #include <string.h>
     void yyerror (char *);       
     int yylex(void);
+    
+
+
+    // nodeType as in section
+    struct nodeType{
+        char *type;
+        union{
+            int intVal;
+            float floatVal;
+            char* stringVal;
+
+        } value;
+
+    };
+    // Functions
+    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op);
+    struct nodeType* createIntNode(int value);
+
 
 
 /* Line 189 of yacc.c  */
-#line 80 "main.tab.c"
+#line 101 "main.tab.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -110,7 +131,21 @@
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+typedef union YYSTYPE
+{
+
+/* Line 214 of yacc.c  */
+#line 30 ".\\main.y"
+
+        int TYPE_INT; 
+        void* TYPE_VOID;
+        struct nodeType* TYPE_NODE;
+;
+
+
+/* Line 214 of yacc.c  */
+#line 148 "main.tab.c"
+} YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -121,7 +156,7 @@ typedef int YYSTYPE;
 
 
 /* Line 264 of yacc.c  */
-#line 125 "main.tab.c"
+#line 160 "main.tab.c"
 
 #ifdef short
 # undef short
@@ -403,7 +438,7 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    16,    16,    17,    21,    22,    23
+       0,    48,    48,    49,    54,    55,    56
 };
 #endif
 
@@ -1299,28 +1334,42 @@ yyreduce:
         case 2:
 
 /* Line 1455 of yacc.c  */
-#line 16 ".\\main.y"
-    { printf("%d\n", (yyvsp[(2) - (3)])); ;}
+#line 48 ".\\main.y"
+    { printf("%d\n", (yyvsp[(2) - (3)].TYPE_NODE)->value.intVal); ;}
+    break;
+
+  case 3:
+
+/* Line 1455 of yacc.c  */
+#line 49 ".\\main.y"
+    {;;}
+    break;
+
+  case 4:
+
+/* Line 1455 of yacc.c  */
+#line 54 ".\\main.y"
+    { (yyval.TYPE_NODE) = createIntNode((yyvsp[(1) - (1)].TYPE_INT)); ;}
     break;
 
   case 5:
 
 /* Line 1455 of yacc.c  */
-#line 22 ".\\main.y"
-    { (yyval) = (yyvsp[(1) - (3)]) + (yyvsp[(3) - (3)]); ;}
+#line 55 ".\\main.y"
+    { (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (3)].TYPE_NODE),(yyvsp[(3) - (3)].TYPE_NODE),'+'); ;}
     break;
 
   case 6:
 
 /* Line 1455 of yacc.c  */
-#line 23 ".\\main.y"
-    { (yyval) = (yyvsp[(1) - (3)]) - (yyvsp[(3) - (3)]); ;}
+#line 56 ".\\main.y"
+    { (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (3)].TYPE_NODE),(yyvsp[(3) - (3)].TYPE_NODE),'-');;}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 1324 "main.tab.c"
+#line 1373 "main.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1532,7 +1581,7 @@ yyreturn:
 
 
 /* Line 1675 of yacc.c  */
-#line 26 ".\\main.y"
+#line 59 ".\\main.y"
 
 
 void yyerror(char *s) {
@@ -1543,4 +1592,40 @@ int main(void) {
     yyparse();
     return 0;
 }
+// Create Int Node
+struct nodeType* createIntNode(int value) {
+    struct nodeType* node = malloc(sizeof(struct nodeType));
+    node->type = "int";
+    node->value.intVal = value;
+    return node;
+}
 
+
+struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
+    struct nodeType* p = malloc(sizeof(struct nodeType));
+    if(strcmp(op1->type, "int") == 0 && strcmp(op2->type, "int") == 0){
+        p->type = "int";
+        switch(op){
+            case '+':
+                p->value.intVal = op1->value.intVal + op2->value.intVal;
+                break;
+            case '-':
+                p->value.intVal = op1->value.intVal - op2->value.intVal;
+                break;
+            case '*':
+                p->value.intVal = op1->value.intVal * op2->value.intVal;
+                break;
+            case '/':
+                p->value.intVal = op1->value.intVal / op2->value.intVal;
+                break;
+            case '%':
+                p->value.intVal = op1->value.intVal % op2->value.intVal;
+                break;
+          
+        }
+    }
+   
+  
+    
+    return p;
+}

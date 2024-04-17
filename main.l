@@ -18,6 +18,7 @@ arithmeticOps   [/+*%-]
 "if"        {return IF;}
 "else"      {return ELSE;}
 "=="        {return EQ;}
+"==="       {return yytext[0];}
 .           yyerror("Unknown character");
 %%
 

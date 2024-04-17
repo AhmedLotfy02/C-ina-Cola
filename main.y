@@ -50,7 +50,7 @@
 
 //------------------------
 // Return Types
-%type <TYPE_VOID> program 
+%type <TYPE_VOID> program codeBlock
 %type <TYPE_NODE> expr
 // Flow Statements
 %type <TYPE_VOID> ifCondition 
@@ -73,9 +73,15 @@ expr:
         ;
 
 /* Conditions */
-ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' '}' {printf("IF (){} is detected \n");} 
+ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {printf("IF (){} is detected \n");} codeBlock '}'  elseCondition {;}
+             ;
+elseCondition: ELSE {;} {printf("inside else  \n");} ifCondition {;}
+             | ELSE '{' codeBlock '}' {printf("else {} detected \n");} 
              ;
 
+/* Code Block */
+codeBlock:  expr {printf("inside code block \n");}
+         ;
 
 %%
 

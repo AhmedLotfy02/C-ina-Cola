@@ -16,6 +16,7 @@ arithmeticOps   [/+*%-]
 {DIGIT}+ { yylval.TYPE_INT = atoi(yytext); return INTEGER;}
 {arithmeticOps} {return *yytext;} /*just return the operator*/
 "if"        {return IF;}
+"else"      {return ELSE;}
 "=="        {return EQ;}
 .           yyerror("Unknown character");
 %%

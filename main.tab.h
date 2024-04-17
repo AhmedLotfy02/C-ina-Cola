@@ -53,7 +53,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 33 ".\\main.y"
+#line 33 "main.y"
 
         int TYPE_INT; 
         void* TYPE_VOID;

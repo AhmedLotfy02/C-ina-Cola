@@ -75,7 +75,8 @@ expr:
 /* Conditions */
 ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {printf("IF (){} is detected \n");} codeBlock '}'  elseCondition {;}
              ;
-elseCondition: ELSE {;} {printf("inside else  \n");} ifCondition {;}
+elseCondition: {;} {printf("inside bare else  \n");}
+             | ELSE {;} {printf("inside else  \n");} ifCondition {;}
              | ELSE '{' codeBlock '}' {printf("else {} detected \n");} 
              ;
 

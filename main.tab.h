@@ -39,7 +39,10 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     INTEGER = 258
+     EQ = 258,
+     INTEGER = 259,
+     IF = 260,
+     ELSE = 261
    };
 #endif
 
@@ -50,16 +53,17 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 30 ".\\main.y"
+#line 33 ".\\main.y"
 
         int TYPE_INT; 
         void* TYPE_VOID;
         struct nodeType* TYPE_NODE;
+
 ;
 
 
 /* Line 1676 of yacc.c  */
-#line 63 "main.tab.h"
+#line 67 "main.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

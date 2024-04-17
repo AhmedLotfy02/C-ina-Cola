@@ -15,6 +15,7 @@
             int intVal;
             float floatVal;
             char* stringVal;
+            int boolVal;
 
         } value;
 
@@ -22,6 +23,8 @@
     // Functions
     struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op);
     struct nodeType* createIntNode(int value);
+    struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op);
+
 
 %}
 /* Yacc definitions */
@@ -31,21 +34,33 @@
         int TYPE_INT; 
         void* TYPE_VOID;
         struct nodeType* TYPE_NODE;
+
 ;}
 
 //Precedence of Operators (the upper is the lower precedence)
+%left EQ
 %left  '+' '-' 
 %left  '*' '/' 
 
-
+//-----------TOKENS-------------
 // Data Types
 %token <TYPE_INT> INTEGER
+//Flow Statements
+%token IF ELSE
+
+//------------------------
 // Return Types
-%type <TYPE_VOID> program
+%type <TYPE_VOID> program 
 %type <TYPE_NODE> expr
+// Flow Statements
+%type <TYPE_VOID> ifCondition 
+
+
+
 %%
 program:
         program expr '\n' { printf("%d\n", $2->value.intVal); }
+        | ifCondition program
         |  {;}
         ;
 
@@ -54,7 +69,13 @@ expr:
         INTEGER                   { $$ = createIntNode($1); } 
         | expr '+' expr           { $$ = arithmatic($1,$3,'+'); }
         | expr '-' expr           { $$ = arithmatic($1,$3,'-');}
+        | expr EQ expr            { $$ = doComparison($1,$3,"==");}
         ;
+
+/* Conditions */
+ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' '}' {printf("IF (){} is detected \n");} 
+             ;
+
 
 %%
 
@@ -99,7 +120,16 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
         }
     }
    
-  
-    
+    return p;
+}
+
+
+struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
+    printf("Comparing %d %s %d\n", op1->value.intVal, op, op2->value.intVal);
+    struct nodeType* p = malloc(sizeof(struct nodeType));
+    p->type = "bool";
+    if(strcmp(op, "==") == 0){
+        p->value.boolVal = op1->value.intVal == op2->value.intVal;
+    }
     return p;
 }

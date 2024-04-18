@@ -46,7 +46,9 @@
      ELSE = 262,
      SWITCH = 263,
      CASE = 264,
-     DEFAULT = 265
+     DEFAULT = 265,
+     WHILE = 266,
+     FOR = 267
    };
 #endif
 
@@ -67,7 +69,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 71 "main.tab.h"
+#line 73 "main.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

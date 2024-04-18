@@ -11,7 +11,7 @@ NEW_LINE \n
 arithmeticOps   [/+*%-]
 %%
 {NEW_LINE}  {return yytext[0];} /*ignore new lines and processed to the next line*/ 
-[(){}:]        {return yytext[0];}
+[(){}:=;]        {return yytext[0];}
 {SPACE}     ; /*ignore spaces*/
 {DIGIT}+ { yylval.TYPE_INT = atoi(yytext); return INTEGER;}
 {arithmeticOps} {return *yytext;} /*just return the operator*/
@@ -20,6 +20,8 @@ arithmeticOps   [/+*%-]
 "=="        {return EQ;}
 "switch"    {return SWITCH;}
 "case"      {return CASE;}
+"while"     {return WHILE;}
+"for"       {return FOR;}
 [a-zA-Z_][a-zA-Z0-9_]* {yylval.TYPE_INT = yytext[0]; return IDENTIFIER; }
 .           yyerror("Unknown character");
 %%

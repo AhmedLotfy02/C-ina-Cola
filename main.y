@@ -20,6 +20,21 @@
         } value;
 
     };
+    struct symbol {
+        char name;
+        char *type;
+        union {
+                int intVal;
+                float floatVal;
+                char* stringVal;
+                int boolVal;
+        }value;
+        int isDecl, isConst, isInit, isUsed, scope;
+    };
+    struct symbol symbol_Table [100]; // 26 for lower case, 26 for upper case
+    int sym_table_idx = 0;
+    void insert(char name, char* type, int isConst, int isInit, int isUsed, int scope);
+    
     // Functions
     struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op);
     struct nodeType* createIntNode(int value);
@@ -49,30 +64,44 @@
 //Flow Statements
 %token IF ELSE
 %token SWITCH CASE DEFAULT
+// LOOPS
+%token WHILE FOR
 //------------------------
 // Return Types
-%type <TYPE_VOID> program codeBlock
-%type <TYPE_NODE> expr
+%type <TYPE_VOID> program codeBlock controlStatment
+%type <TYPE_NODE> expr assignment
 // Flow Statements
-%type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal
+%type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop
 
 %%
 program:
         program expr '\n' { printf("%d\n", $2->value.intVal); }
-        | ifCondition program
-        | switchCase
+        | controlStatment program
+        | assignment
         |  {;}
         ;
 
+/*------Control Statements----------*/
+controlStatment: while
+                | forLoop
+                | ifCondition
+                | switchCase
+                ;
+
+
 /* Decleration */
+assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {;}
+        ;
 expr:
-        INTEGER                   { $$ = createIntNode($1); } 
+        INTEGER   {printf("integer");}                { $$ = createIntNode($1); } 
         | expr '+' expr           { $$ = arithmatic($1,$3,'+'); }
         | expr '-' expr           { $$ = arithmatic($1,$3,'-');}
         | expr EQ expr            { $$ = doComparison($1,$3,"==");}
         | '(' expr ')'             {$$ = $2;}
         | IDENTIFIER               {printf("hello identifier  \n");}
         ;
+
+
 
 dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
@@ -91,9 +120,16 @@ caseList : caseList case
          | case 
          ;
 
-case        : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");} expr
-            | DEFAULT ':'    dummyNonTerminal {;}
-            ;
+case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");} expr
+        | DEFAULT ':'    dummyNonTerminal {;}
+        ;
+
+/*---------------------------------------*/
+/* ----------------Loops--------------- */
+while : WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
+      ;
+forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
+       ;
 
 /*---------------------------------------*/
 /* ------------Code Block----------------- */
@@ -155,4 +191,20 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
         p->value.boolVal = op1->value.intVal == op2->value.intVal;
     }
     return p;
+}
+
+
+void insert(char name, char* type, int isConst, int isInit, int isUsed, int scope){
+
+    symbol_Table [sym_table_idx].name = name;
+    symbol_Table [sym_table_idx].type = type;
+    symbol_Table [sym_table_idx].isDecl = 1;
+    symbol_Table [sym_table_idx].isConst = isConst;
+
+    symbol_Table [sym_table_idx].isInit = isInit;
+    symbol_Table [sym_table_idx].isUsed = isUsed;
+    symbol_Table [sym_table_idx].scope = scope;
+    ++sym_table_idx;
+
+    printf("SymbolTable() inserted: %c, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
 }

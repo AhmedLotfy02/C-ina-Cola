@@ -45,22 +45,22 @@
 //-----------TOKENS-------------
 // Data Types
 %token <TYPE_INT> INTEGER
+%token <TYPE_NODE> IDENTIFIER
 //Flow Statements
 %token IF ELSE
-
+%token SWITCH CASE DEFAULT
 //------------------------
 // Return Types
 %type <TYPE_VOID> program codeBlock
 %type <TYPE_NODE> expr
 // Flow Statements
-%type <TYPE_VOID> ifCondition 
-
-
+%type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal
 
 %%
 program:
         program expr '\n' { printf("%d\n", $2->value.intVal); }
         | ifCondition program
+        | switchCase
         |  {;}
         ;
 
@@ -70,9 +70,14 @@ expr:
         | expr '+' expr           { $$ = arithmatic($1,$3,'+'); }
         | expr '-' expr           { $$ = arithmatic($1,$3,'-');}
         | expr EQ expr            { $$ = doComparison($1,$3,"==");}
+        | '(' expr ')'             {$$ = $2;}
+        | IDENTIFIER               {printf("hello identifier  \n");}
         ;
 
-/* Conditions */
+dummyNonTerminal:  {printf("inside dummy  \n");}
+                ;
+
+/* ----------------Conditions--------------- */
 ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {printf("IF (){} is detected \n");} codeBlock '}'  elseCondition {;}
              ;
 elseCondition: {;} {printf("inside bare else  \n");}
@@ -80,7 +85,18 @@ elseCondition: {;} {printf("inside bare else  \n");}
              | ELSE '{' codeBlock '}' {printf("else {} detected \n");} 
              ;
 
-/* Code Block */
+switchCase: SWITCH '(' IDENTIFIER ')' {printf("switch case passed  \n");} '{' caseList '}'
+          ;
+caseList : caseList case 
+         | case 
+         ;
+
+case        : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");} expr
+            | DEFAULT ':'    dummyNonTerminal {;}
+            ;
+
+/*---------------------------------------*/
+/* ------------Code Block----------------- */
 codeBlock:  expr {printf("inside code block \n");}
          ;
 

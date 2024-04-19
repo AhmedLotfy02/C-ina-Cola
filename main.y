@@ -20,6 +20,7 @@
         } value;
 
     };
+    // Symbol Table
     struct symbol {
         char name;
         char *type;
@@ -34,12 +35,20 @@
     struct symbol symbol_Table [100]; // 26 for lower case, 26 for upper case
     int sym_table_idx = 0;
     void insert(char name, char* type, int isConst, int isInit, int isUsed, int scope);
-    
+    ///////////////////////////////////////////////
+    // Scope Table
+    int scope_idx = 1;
+    int scope_lvl = 1;
+    int scopes[100];
+    void enterScope();
+    void exitScope();
+    ///////////////////////////////////////////////
     // Functions
     struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op);
     struct nodeType* createIntNode(int value);
     struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op);
-
+    struct nodeType* createNode(char* type);
+    void checkSameScope(char name);
 
 %}
 /* Yacc definitions */
@@ -48,6 +57,7 @@
 %union {
         int TYPE_INT; 
         void* TYPE_VOID;
+        char* TYPE_DATA_TYPE;
         struct nodeType* TYPE_NODE;
 
 ;}
@@ -72,12 +82,18 @@
 %type <TYPE_NODE> expr assignment
 // Flow Statements
 %type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop
+// Decleration
+%token <TYPE_DATA_TYPE> INT_DATA_TYPE FLOAT_DATA_TYPE STRING_DATA_TYPE BOOL_DATA_TYPE VOID_DATA_TYPE
+%type <TYPE_NODE> dataType decleration
+
 
 %%
 program:
         program expr '\n' { printf("%d\n", $2->value.intVal); }
         | controlStatment program
         | assignment
+        |dataType
+        | decleration
         |  {;}
         ;
 
@@ -90,6 +106,16 @@ controlStatment: while
 
 
 /* Decleration */
+
+dataType: INT_DATA_TYPE     {printf("int data type \n");} { $$ = createIntNode(0); }
+        | FLOAT_DATA_TYPE   {printf("float data type \n");} { $$ = createNode("float"); }
+        | STRING_DATA_TYPE  {printf("string data type \n");} { $$ = createNode("string"); }
+        | BOOL_DATA_TYPE    {printf("bool data type \n");} { $$ = createNode("bool"); }
+        | VOID_DATA_TYPE    {printf("void data type \n");} { ; }
+        ;
+/* */
+decleration: dataType IDENTIFIER  {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");}
+           ;
 assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {;}
         ;
 expr:
@@ -124,7 +150,9 @@ case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");
         | DEFAULT ':'    dummyNonTerminal {;}
         ;
 
+
 /*---------------------------------------*/
+
 /* ----------------Loops--------------- */
 while : WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
       ;
@@ -142,16 +170,19 @@ void yyerror(char *s) {
     fprintf(stderr, "%s\n", s);
 }
 
-int main(void) {
-    yyparse();
-    return 0;
-}
+
 // Create Int Node
 struct nodeType* createIntNode(int value) {
     struct nodeType* node = malloc(sizeof(struct nodeType));
     node->type = "int";
     node->value.intVal = value;
     return node;
+}
+struct nodeType* createNode(char* type) {
+    struct nodeType* p = malloc(sizeof(struct nodeType));
+    p->type = type;
+    p->value.intVal = 0;
+    return p;
 }
 
 
@@ -207,4 +238,29 @@ void insert(char name, char* type, int isConst, int isInit, int isUsed, int scop
     ++sym_table_idx;
 
     printf("SymbolTable() inserted: %c, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
+}
+void enterScope() {
+    scopes[scope_idx] = scope_lvl;
+    scope_idx++;
+    scope_lvl++;
+}
+
+void exitScope() {
+    scope_idx--;
+}
+void checkSameScope(char name) {
+    int lvl;
+    for(int i=0; i<sym_table_idx ;i++) {
+        if(symbol_Table[i].name == name) {
+            lvl = symbol_Table[i].scope;
+            if(lvl == scopes[scope_idx-1]) {
+                 printf("Error: variable %c already declared in the same scope\n", name); 
+              
+            }
+        }
+    }
+}
+int main(void) {
+    yyparse();
+    return 0;
 }

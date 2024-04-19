@@ -48,7 +48,12 @@
      CASE = 264,
      DEFAULT = 265,
      WHILE = 266,
-     FOR = 267
+     FOR = 267,
+     INT_DATA_TYPE = 268,
+     FLOAT_DATA_TYPE = 269,
+     STRING_DATA_TYPE = 270,
+     BOOL_DATA_TYPE = 271,
+     VOID_DATA_TYPE = 272
    };
 #endif
 
@@ -59,17 +64,18 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 33 "main.y"
+#line 57 "main.y"
 
         int TYPE_INT; 
         void* TYPE_VOID;
+        char* TYPE_DATA_TYPE;
         struct nodeType* TYPE_NODE;
 
 ;
 
 
 /* Line 1676 of yacc.c  */
-#line 73 "main.tab.h"
+#line 79 "main.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

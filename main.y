@@ -44,12 +44,13 @@
     void exitScope();
     ///////////////////////////////////////////////
     // Functions
+    int argCount = 0;
     struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op);
     struct nodeType* createIntNode(int value);
     struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op);
     struct nodeType* createNode(char* type);
     void checkSameScope(char name);
-
+  
 %}
 /* Yacc definitions */
 
@@ -85,15 +86,17 @@
 // Decleration
 %token <TYPE_DATA_TYPE> INT_DATA_TYPE FLOAT_DATA_TYPE STRING_DATA_TYPE BOOL_DATA_TYPE VOID_DATA_TYPE
 %type <TYPE_NODE> dataType decleration
-
+// Functions
+%type <TYPE_VOID> functionArgs functionDefinition functionDefinitionAfter
 
 %%
 program:
         program expr '\n' { printf("%d\n", $2->value.intVal); }
         | controlStatment program
         | assignment
-        |dataType
-        | decleration
+       
+        | functionDefinition
+        
         |  {;}
         ;
 
@@ -164,6 +167,17 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
 codeBlock:  expr {printf("inside code block \n");}
          ;
 
+/*---------------------------------------*/
+/* ------------Functions----------------- */
+functionArgs: dataType IDENTIFIER   {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
+            | dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ','  functionArgs
+            ;   
+functionDefinition: dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope();} {printf("here \n");} functionDefinitionAfter '{' codeBlock '}' {exitScope();}
+                  ;
+functionDefinitionAfter: '(' functionArgs ')' {printf("definitions with params  \n");}
+                        | '(' ')' {printf("definitions without params  \n");}
+                        ;
+
 %%
 
 void yyerror(char *s) {
@@ -178,6 +192,7 @@ struct nodeType* createIntNode(int value) {
     node->value.intVal = value;
     return node;
 }
+// Create Node
 struct nodeType* createNode(char* type) {
     struct nodeType* p = malloc(sizeof(struct nodeType));
     p->type = type;
@@ -185,7 +200,7 @@ struct nodeType* createNode(char* type) {
     return p;
 }
 
-
+// Arithmatic
 struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
     struct nodeType* p = malloc(sizeof(struct nodeType));
     if(strcmp(op1->type, "int") == 0 && strcmp(op2->type, "int") == 0){
@@ -213,7 +228,7 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
     return p;
 }
 
-
+// Comparison
 struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
     printf("Comparing %d %s %d\n", op1->value.intVal, op, op2->value.intVal);
     struct nodeType* p = malloc(sizeof(struct nodeType));
@@ -224,7 +239,7 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     return p;
 }
 
-
+// Insert the variable in the symbol table
 void insert(char name, char* type, int isConst, int isInit, int isUsed, int scope){
 
     symbol_Table [sym_table_idx].name = name;
@@ -239,15 +254,17 @@ void insert(char name, char* type, int isConst, int isInit, int isUsed, int scop
 
     printf("SymbolTable() inserted: %c, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
 }
+// Enter the scope
 void enterScope() {
     scopes[scope_idx] = scope_lvl;
     scope_idx++;
     scope_lvl++;
 }
-
+// Exit the scope
 void exitScope() {
     scope_idx--;
 }
+// Check if the variable is declared in the same scope
 void checkSameScope(char name) {
     int lvl;
     for(int i=0; i<sym_table_idx ;i++) {
@@ -260,6 +277,7 @@ void checkSameScope(char name) {
         }
     }
 }
+
 int main(void) {
     yyparse();
     return 0;

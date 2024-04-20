@@ -79,7 +79,7 @@
 %token WHILE FOR
 //------------------------
 // Return Types
-%type <TYPE_VOID> program codeBlock controlStatment
+%type <TYPE_VOID> program codeBlock controlStatment statement
 %type <TYPE_NODE> expr assignment
 // Flow Statements
 %type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop
@@ -136,14 +136,14 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
 
 /* ----------------Conditions--------------- */
-ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {printf("IF (){} is detected \n");} codeBlock '}'  elseCondition {;}
+ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {exitScope();} elseCondition {;}
              ;
 elseCondition: {;} {printf("inside bare else  \n");}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
-             | ELSE '{' codeBlock '}' {printf("else {} detected \n");} 
+             | ELSE '{' {enterScope();} codeBlock '}' {exitScope();} {printf("else {} detected \n");} 
              ;
 
-switchCase: SWITCH '(' IDENTIFIER ')' {printf("switch case passed  \n");} '{' caseList '}'
+switchCase: SWITCH '(' IDENTIFIER ')' {printf("switch case passed  \n");} '{' {enterScope();} caseList '}' {exitScope();}
           ;
 caseList : caseList case 
          | case 
@@ -163,8 +163,15 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
        ;
 
 /*---------------------------------------*/
+
+/* ------------Statement----------------- */
+statement: assignment {;}
+            | expr {;}
+            | decleration {;}
+        ;
+/*---------------------------------------*/
 /* ------------Code Block----------------- */
-codeBlock:  expr {printf("inside code block \n");}
+codeBlock:  statement {;}
          ;
 
 /*---------------------------------------*/

@@ -1,4 +1,5 @@
 %{
+    // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
     #include <stdlib.h>
     #include <ctype.h>
@@ -50,7 +51,9 @@
     struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op);
     struct nodeType* createNode(char* type);
     void checkSameScope(char name);
-  
+    void checkConst(char name);
+    void printSymbolTable();
+    void checkOutOfScope(char name);
 %}
 /* Yacc definitions */
 
@@ -76,10 +79,10 @@
 %token IF ELSE
 %token SWITCH CASE DEFAULT
 // LOOPS
-%token WHILE FOR
+%token WHILE FOR BREAK
 //------------------------
 // Return Types
-%type <TYPE_VOID> program codeBlock controlStatment statement
+%type <TYPE_VOID> program codeBlock controlStatement statement statements
 %type <TYPE_NODE> expr assignment
 // Flow Statements
 %type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop
@@ -92,16 +95,15 @@
 %%
 program:
         program expr '\n' { printf("%d\n", $2->value.intVal); }
-        | controlStatment program
-        | assignment
-       
+        | statements
+        | statements program
         | functionDefinition
         
         |  {;}
         ;
 
 /*------Control Statements----------*/
-controlStatment: while
+controlStatement: while
                 | forLoop
                 | ifCondition
                 | switchCase
@@ -117,9 +119,10 @@ dataType: INT_DATA_TYPE     {printf("int data type \n");} { $$ = createIntNode(0
         | VOID_DATA_TYPE    {printf("void data type \n");} { ; }
         ;
 /* */
-decleration: dataType IDENTIFIER  {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");}
+decleration: dataType IDENTIFIER  {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");} {printSymbolTable();}
            ;
-assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {;}
+assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {checkOutOfScope($1); checkConst($1); } {printSymbolTable();}
+          ;
         ;
 expr:
         INTEGER   {printf("integer");}                { $$ = createIntNode($1); } 
@@ -138,7 +141,7 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
 /* ----------------Conditions--------------- */
 ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {exitScope();} elseCondition {;}
              ;
-elseCondition: {;} {printf("inside bare else  \n");}
+elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
              | ELSE '{' {enterScope();} codeBlock '}' {exitScope();} {printf("else {} detected \n");} 
              ;
@@ -150,7 +153,7 @@ caseList : caseList case
          ;
 
 case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");} expr
-        | DEFAULT ':'    dummyNonTerminal {;}
+        | DEFAULT ':'    statements {;}
         ;
 
 
@@ -170,11 +173,18 @@ statement: assignment {;}
             | decleration {;}
         ;
 /*---------------------------------------*/
-/* ------------Code Block----------------- */
-codeBlock:  statement {;}
-         ;
 
+/* ------------Statements----------------- */
+statements: statement ';' {;}
+            | controlStatement {;}
+            | statements controlStatement {;}
+            | statements statement ';' {;}
+            |'{'{enterScope();} codeBlock '}'{exitScope();}
+        ;
 /*---------------------------------------*/
+/* ------------Code Block----------------- */
+codeBlock:  statements {printf("inside code block \n");}
+         ;/*---------------------------------------*/
 /* ------------Functions----------------- */
 functionArgs: dataType IDENTIFIER   {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
             | dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ','  functionArgs
@@ -282,6 +292,48 @@ void checkSameScope(char name) {
               
             }
         }
+    }
+}
+
+// Check if the variable is declared in the same scope
+void checkOutOfScope(char name) {
+    int lvl;
+    for(int i=sym_table_idx-1; i>=0 ;i--) {
+        if(symbol_Table[i].name == name) {
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) {
+                if(lvl == scopes[j]) {
+                    return;
+                }
+            }
+        }
+    }
+    printf("Error: variable %c is out of scope\n", name);
+
+}
+
+// Check if the node is constant or not
+void checkConst(char name) {
+    for(int i=0; i<sym_table_idx ;i++) {
+        if(symbol_Table[i].name == name) {
+             for(int j=scope_idx-1;j>=0;j--) {
+                if(symbol_Table[i].scope == scopes[j]) {
+                    if(symbol_Table[i].isConst == 1) {
+                        printf("Error: variable %c is constant\n", name);
+                    }
+                    else{
+                        printf("Variable %c is not constant\n", name);
+                        return;
+                    }
+                }
+              }
+        }
+    }
+}
+// Print the symbol table
+void printSymbolTable() {
+    for(int i=0; i<sym_table_idx ;i++) {
+        printf("SymbolTable() : %c, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [i].name, symbol_Table [i].isDecl, symbol_Table [i].isConst, i); 
     }
 }
 

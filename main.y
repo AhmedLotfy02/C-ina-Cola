@@ -63,21 +63,30 @@
         void* TYPE_VOID;
         char* TYPE_DATA_TYPE;
         struct nodeType* TYPE_NODE;
-
+        char* TYPE_DATA_MODIFIER;
+        int TYPE_BOOL;
+        float TYPE_FLOAT;
 ;}
 
 //Precedence of Operators (the upper is the lower precedence)
-%left EQ
+%left  AND OR 
+%left EQ NEQ
 %left  '+' '-' 
+%right NOT 
 %left  '*' '/' 
 
 //-----------TOKENS-------------
 // Data Types
 %token <TYPE_INT> INTEGER
+%token <TYPE_FLOAT> FLOAT_NUMBER
 %token <TYPE_NODE> IDENTIFIER
+%token <TYPE_DATA_MODIFIER> CONST
+%token RETURN
 //Flow Statements
 %token IF ELSE
 %token SWITCH CASE DEFAULT
+%token <TYPE_BOOL> TRUE_VAL 
+%token <TYPE_BOOL> FALSE_VAL 
 // LOOPS
 %token WHILE FOR BREAK
 //------------------------

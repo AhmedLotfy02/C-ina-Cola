@@ -39,22 +39,31 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     EQ = 258,
-     INTEGER = 259,
-     IDENTIFIER = 260,
-     IF = 261,
-     ELSE = 262,
-     SWITCH = 263,
-     CASE = 264,
-     DEFAULT = 265,
-     WHILE = 266,
-     FOR = 267,
-     BREAK = 268,
-     INT_DATA_TYPE = 269,
-     FLOAT_DATA_TYPE = 270,
-     STRING_DATA_TYPE = 271,
-     BOOL_DATA_TYPE = 272,
-     VOID_DATA_TYPE = 273
+     OR = 258,
+     AND = 259,
+     NEQ = 260,
+     EQ = 261,
+     NOT = 262,
+     INTEGER = 263,
+     FLOAT_NUMBER = 264,
+     IDENTIFIER = 265,
+     CONST = 266,
+     RETURN = 267,
+     IF = 268,
+     ELSE = 269,
+     SWITCH = 270,
+     CASE = 271,
+     DEFAULT = 272,
+     TRUE_VAL = 273,
+     FALSE_VAL = 274,
+     WHILE = 275,
+     FOR = 276,
+     BREAK = 277,
+     INT_DATA_TYPE = 278,
+     FLOAT_DATA_TYPE = 279,
+     STRING_DATA_TYPE = 280,
+     BOOL_DATA_TYPE = 281,
+     VOID_DATA_TYPE = 282
    };
 #endif
 
@@ -71,12 +80,14 @@ typedef union YYSTYPE
         void* TYPE_VOID;
         char* TYPE_DATA_TYPE;
         struct nodeType* TYPE_NODE;
-
+        char* TYPE_DATA_MODIFIER;
+        int TYPE_BOOL;
+        float TYPE_FLOAT;
 ;
 
 
 /* Line 1676 of yacc.c  */
-#line 80 "main.tab.h"
+#line 91 "main.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

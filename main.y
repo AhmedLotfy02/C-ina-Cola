@@ -64,6 +64,8 @@
     void quadJumpFalseLabel(int labelNum);
     void quadJumpEndLabel();
     void quadPopLabel();
+    void quadPushEndLabel(int endLabelNum);
+    void quadPopEndLabel();
     // nodeType as in section
     struct nodeType{
         char *type;
@@ -159,10 +161,12 @@
 
 %%
 program:
-        program expr '\n' { printf("%d\n", $2->value.intVal); }
-        | statements
-        | statements program
-        | functionDefinition
+        // program expr '\n' { printf("%d\n", $2->value.intVal); }
+        
+        | functionDefinition {;}
+        | statements {printf("hi1");}
+        | statements program {printf("hi2");}
+        | functionDefinition program {;}
         
         |  {;}
         ;
@@ -170,7 +174,7 @@ program:
 /*------Control Statements----------*/
 controlStatement: while
                 | forLoop
-                | ifCondition
+                | {quadPushEndLabel(++endLabelNum);} ifCondition {quadPopEndLabel();}
                 | switchCase
                 ;
 
@@ -204,7 +208,7 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
 
 /* ----------------Conditions--------------- */
-ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum)} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {exitScope();quadJumpEndLabel();quadPopLabel();} elseCondition {;}
+ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum)} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {printf("asdasd");} {exitScope();quadJumpEndLabel();quadPopLabel();} elseCondition {;}
              ;
 elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
@@ -234,7 +238,7 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
 
 /* ------------Statement----------------- */
 statement: assignment {;}
-            | expr {;}
+            | expr {printf("aloo\n");}
             | decleration {;}
         ;
 /*---------------------------------------*/
@@ -242,9 +246,9 @@ statement: assignment {;}
 /* ------------Statements----------------- */
 statements: statement ';' {;}
             | controlStatement {;}
-            | statements controlStatement {;}
             | statements statement ';' {;}
             |'{'{enterScope();} codeBlock '}'{exitScope();}
+            | statements controlStatement {printf("state+controlState");}
         ;
 /*---------------------------------------*/
 /* ------------Code Block----------------- */
@@ -436,6 +440,24 @@ void quadPopLabel(){
     
     printf("Quads(%d) Label_%d:\n",line, labelNum);
        
+}
+// push the end label to the stack
+void quadPushEndLabel(int endLabelNum)
+{
+    /* push the labelNum to the stack */
+    endLabelStack[++endLabelstackPointer] = endLabelNum;    
+}
+// pop the last end label from the stack
+void quadPopEndLabel(){
+    if (endLabelstackPointer < 0){
+        printf("Quads(%d) Error: No end label to add. Segmenration Fault\n", line);
+        return;
+    }
+    /* get the last endLabelNum from the stack */
+    int endLabelNum = endLabelStack[endLabelstackPointer--];
+    
+    printf("Quads(%d) EndLabel_%d:\n", line, endLabelNum);
+      
 }
 int main(void) {
     yyparse();

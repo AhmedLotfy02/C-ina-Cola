@@ -77,12 +77,68 @@
     #include <string.h>
     void yyerror (char *);       
     int yylex(void);
-    
+    void printSymbolTable();
+    extern int line;
+    #define SHOW_SEMANTIC_ERROR 1
+    #define TYPE_MISMATCH 1
+    #define UNDECLARED 2
+    #define UNINITIALIZED 3
+    #define UNUSED 4
+    #define REDECLARED 5
+    #define CONSTANT 6
+    #define OUT_OF_SCOPE 7
+    #define CONSTANT_IF 8
+    void semanticError(int semanticErr,char c){
+        int errLine=line;
+        switch(semanticErr){
+            case TYPE_MISMATCH:
+                printf("Semanic Error: Type mismatch at line %d\n",errLine);
+                break;
+            case UNDECLARED:
+                printf("Semanic Error: Variable %c undeclared at line %d\n",c,errLine);
+                break;
+            case UNINITIALIZED:
+                printf("Semanic Error: Variable %c uninitialized at line %d\n",c,errLine);
+                break;
+            case UNUSED:
+                printf("Warning: Variable %c declared but not used at line %d\n",c,errLine);
+                break;
+            case REDECLARED:
+                printf("Semanic Error: Variable %c redeclared at line %d\n",c,errLine);
+                break;
+            case CONSTANT:
+                printf("Semanic Error: Variable %c is constant at line %d\n",c,errLine);
+                break;
+            case OUT_OF_SCOPE:
+                printf("Semanic Error: Variable %c is out of scope at line %d\n",c,errLine);
+                break;
+            case CONSTANT_IF:
+                printf("Semanic Error: Variable %c is constant in if condition at line %d\n",c,errLine);
+                break;
+            default:
+                printf("Semanic Error: Unknown error at line %d\n",errLine);
+                break;
+        }
+        printSymbolTable();
+    }
 
-
+    // Label Stack for quads generation    
+    #define MAX_STACK_SIZE 100
+    int labelNum = 0;
+    int labelStackPointer = -1;
+    int labelStack[MAX_STACK_SIZE];
+    // End Label Stack for tracking last label
+    int endLabelNum = 0;
+    int endLabelstackPointer = -1;
+    int endLabelStack[MAX_STACK_SIZE];
+    // Quad Functions
+    void quadJumpFalseLabel(int labelNum);
+    void quadJumpEndLabel();
+    void quadPopLabel();
     // nodeType as in section
     struct nodeType{
         char *type;
+        int isConst; // 1 if constant 0 if not constant 
         union{
             int intVal;
             float floatVal;
@@ -90,7 +146,7 @@
             int boolVal;
 
         } value;
-
+        
     };
     // Symbol Table
     struct symbol {
@@ -123,12 +179,12 @@
     struct nodeType* createNode(char* type);
     void checkSameScope(char name);
     void checkConst(char name);
-    void printSymbolTable();
     void checkOutOfScope(char name);
+    void checkConstIF(struct nodeType* node);
 
 
 /* Line 189 of yacc.c  */
-#line 132 "main.tab.c"
+#line 188 "main.tab.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -190,7 +246,7 @@ typedef union YYSTYPE
 {
 
 /* Line 214 of yacc.c  */
-#line 61 "main.y"
+#line 117 "main.y"
 
         int TYPE_INT; 
         void* TYPE_VOID;
@@ -203,7 +259,7 @@ typedef union YYSTYPE
 
 
 /* Line 214 of yacc.c  */
-#line 207 "main.tab.c"
+#line 263 "main.tab.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -215,7 +271,7 @@ typedef union YYSTYPE
 
 
 /* Line 264 of yacc.c  */
-#line 219 "main.tab.c"
+#line 275 "main.tab.c"
 
 #ifdef short
 # undef short
@@ -508,7 +564,7 @@ static const yytype_int8 yyrhs[] =
       -1,    -1,    14,    33,    56,    54,    55,    -1,    -1,    12,
       57,    -1,    56,     7,    56,    -1,    56,     8,    56,    -1,
       56,     6,    56,    -1,    34,    56,    35,    -1,    14,    -1,
-      -1,    -1,    -1,    -1,    -1,    17,    59,    34,    56,    60,
+      -1,    -1,    -1,    -1,    -1,    17,    34,    56,    59,    60,
       35,    36,    61,    62,    85,    37,    63,    64,    -1,    -1,
       65,    -1,    -1,    -1,    18,    66,    67,    58,    -1,    -1,
       -1,    18,    36,    68,    85,    37,    69,    -1,    -1,    -1,
@@ -526,16 +582,16 @@ static const yytype_int8 yyrhs[] =
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_uint16 yyrline[] =
 {
-       0,   106,   106,   107,   108,   109,   111,   115,   116,   117,
-     118,   124,   124,   125,   125,   126,   126,   127,   127,   128,
-     128,   131,   131,   131,   133,   133,   133,   137,   137,   138,
-     139,   140,   141,   142,   151,   151,   151,   151,   151,   151,
-     153,   153,   154,   154,   154,   155,   155,   155,   158,   158,
-     158,   160,   161,   164,   164,   164,   165,   172,   172,   174,
-     174,   174,   180,   181,   182,   187,   188,   189,   190,   191,
-     191,   195,   198,   199,   199,   201,   201,   201,   203,   204
+       0,   162,   162,   163,   164,   165,   167,   171,   172,   173,
+     174,   180,   180,   181,   181,   182,   182,   183,   183,   184,
+     184,   187,   187,   187,   189,   189,   189,   193,   193,   194,
+     195,   196,   197,   198,   207,   207,   207,   207,   207,   207,
+     209,   209,   210,   210,   210,   211,   211,   211,   214,   214,
+     214,   216,   217,   220,   220,   220,   221,   228,   228,   230,
+     230,   230,   236,   237,   238,   243,   244,   245,   246,   247,
+     247,   251,   254,   255,   255,   257,   257,   257,   259,   260
 };
 #endif
 
@@ -604,12 +660,12 @@ static const yytype_uint8 yyr2[] =
    means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       6,    27,    33,    34,     0,     0,     0,    11,    13,    15,
+       6,    27,    33,     0,     0,     0,     0,    11,    13,    15,
       17,    19,     0,    69,     0,    66,     0,    64,    62,    63,
        9,    10,     7,     8,     0,     3,     5,    28,     0,     0,
        0,     0,    59,    12,    14,    16,    18,    20,    33,     0,
        0,     1,     0,    21,     0,     0,     0,    65,     4,    66,
-       0,    24,     0,     0,     0,     0,    32,     0,    71,     0,
+       0,    24,    34,     0,     0,     0,    32,     0,    71,     0,
        2,    22,    76,    31,    29,    30,    65,    25,    35,    48,
       57,     0,     0,    21,    67,     0,    70,    23,     0,    26,
        0,     0,     0,    60,    68,     0,     0,     0,    49,     0,
@@ -625,7 +681,7 @@ static const yytype_uint8 yydefact[] =
 static const yytype_int16 yydefgoto[] =
 {
       -1,    14,    15,    57,    33,    34,    35,    36,    37,    17,
-      61,    77,    18,    67,    79,    19,    27,    20,    29,    80,
+      61,    77,    18,    67,    79,    19,    27,    20,    68,    80,
      102,   111,   126,   130,   131,   135,   137,   136,   141,    21,
       81,    96,   105,   106,   112,   127,    22,    82,    23,    55,
       90,    24,    58,    40,    59,    93,   109,    26,    62,    78,
@@ -637,27 +693,27 @@ static const yytype_int16 yydefgoto[] =
 #define YYPACT_NINF -84
 static const yytype_int8 yypact[] =
 {
-      94,   -84,   -25,   -84,   -24,    -8,     5,   -84,   -84,   -84,
+      94,   -84,   -25,   -24,   -15,    -8,     5,   -84,   -84,   -84,
      -84,   -84,    10,   -84,     9,   -84,    22,   -84,   -84,    52,
-     -84,   -84,   -84,   -84,    13,    94,   -84,   -84,    10,    37,
-      55,    10,   -84,   -84,   -84,   -84,   -84,   -84,   -84,    40,
-      94,   -84,    48,    38,    10,    10,    10,   -84,    10,   -84,
-      34,    52,    10,    39,    43,    62,   -84,    63,   115,    44,
-     -84,   -84,   -84,    11,   -84,   -84,   -84,   -84,    52,   -84,
-     -84,   -25,    45,   -84,   -84,    53,   -84,   -84,    49,   -84,
-      56,    46,    57,   -84,   -84,    35,    58,    60,   -84,    94,
-      10,   -84,    81,    64,    94,   -84,    47,    61,     6,    65,
-     -84,    66,   -84,   -84,    69,    -5,   -84,   -84,    62,    70,
-     -84,    94,    10,    94,   -84,   -84,    74,    59,    67,    23,
-     115,    76,   -84,   -84,   -84,    94,    79,    10,    77,    84,
-     -84,   -84,    52,   -84,   -84,   -84,    94,   109,    96,   -84,
+     -84,   -84,   -84,   -84,    13,    94,   -84,   -84,    10,    10,
+      27,    10,   -84,   -84,   -84,   -84,   -84,   -84,   -84,    40,
+      94,   -84,    48,    39,    10,    10,    10,   -84,    10,   -84,
+      30,    52,    52,    41,    43,    63,   -84,    67,   115,    37,
+     -84,   -84,   -84,    60,   -84,   -84,   -84,   -84,   -84,   -84,
+     -84,   -25,    44,   -84,   -84,    45,   -84,   -84,    57,   -84,
+      47,    56,    58,   -84,   -84,    35,    61,    62,   -84,    94,
+      10,   -84,    79,    64,    94,   -84,    51,    66,     6,    55,
+     -84,    68,   -84,   -84,    69,    -5,   -84,   -84,    63,    70,
+     -84,    94,    10,    94,   -84,   -84,    74,    59,    75,    23,
+     115,    78,   -84,   -84,   -84,    94,    86,    10,    83,    90,
+     -84,   -84,    52,   -84,   -84,   -84,    94,   114,    96,   -84,
      -84,   -84
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -84,   106,   -20,     0,   -84,   -84,   -84,   -84,   -84,   -84,
+     -84,    71,   -20,     0,   -84,   -84,   -84,   -84,   -84,   -84,
      -84,   -84,   -51,   -84,   -84,   -11,   -84,    -2,   -84,   -84,
      -84,   -84,   -84,   -84,   -84,   -84,   -84,   -84,   -84,   -84,
      -84,   -84,   -84,    31,   -84,   -84,   -84,   -84,   -84,   -84,
@@ -673,38 +729,38 @@ static const yytype_int8 yypgoto[] =
 static const yytype_int16 yytable[] =
 {
       16,    39,    25,    42,    72,    49,    97,    50,    28,    41,
-      30,   101,    44,    45,    46,   103,   104,    51,    45,    46,
+      29,   101,    44,    45,    46,   103,   104,    51,    52,    30,
       54,     1,     1,    38,    38,    16,    31,    25,   118,    44,
       45,    46,   114,    63,    64,    65,    43,    42,    74,    32,
-      75,    68,   128,    12,    12,   108,    44,    45,    46,    44,
+      75,    53,   128,    12,    12,   108,    44,    45,    46,    44,
       45,    46,    47,   138,    44,    45,    46,   116,    44,    45,
-      46,   124,     7,     8,     9,    10,    11,   103,   104,    53,
-      91,    52,   -75,    66,    69,    56,    71,    73,    70,    98,
-      60,    76,    88,    85,    83,    92,     7,     8,     9,    10,
-      11,    87,    84,    89,    94,    99,    95,   129,   107,   100,
-      74,   119,    75,   110,   123,   -73,     1,   113,     2,   121,
-     117,     3,   125,     4,   133,   120,   132,    92,     5,     6,
-     134,     7,     8,     9,    10,    11,     3,     1,    12,     2,
-      13,    48,     3,   140,     4,   139,   115,   122,     0,     5,
+      46,   124,     7,     8,     9,    10,    11,    45,    46,    66,
+      91,   103,   104,   -75,    76,    56,    69,    71,    70,    98,
+      60,    73,    87,    83,    84,    92,     7,     8,     9,    10,
+      11,    85,    88,    99,    89,   -73,    48,    94,    95,   100,
+      74,   119,    75,   107,   129,   110,     1,   113,     2,   121,
+     117,     3,   123,     4,   125,   120,   132,    92,     5,     6,
+     133,     7,     8,     9,    10,    11,   134,     1,    12,     2,
+      13,     3,     3,   140,     4,   139,   115,   122,     0,     5,
        6,     0,     7,     8,     9,    10,    11,     0,     0,    12
 };
 
 static const yytype_int16 yycheck[] =
 {
        0,    12,     0,    14,    55,    25,    89,    25,    33,     0,
-      34,    94,     6,     7,     8,    20,    21,    28,     7,     8,
+      34,    94,     6,     7,     8,    20,    21,    28,    29,    34,
       31,    12,    12,    14,    14,    25,    34,    25,   111,     6,
        7,     8,    37,    44,    45,    46,    14,    48,    58,    34,
-      58,    52,   125,    34,    34,    39,     6,     7,     8,     6,
+      58,    14,   125,    34,    34,    39,     6,     7,     8,     6,
        7,     8,    39,   136,     6,     7,     8,   108,     6,     7,
-       8,    38,    27,    28,    29,    30,    31,    20,    21,    14,
-      35,    34,    34,    39,    35,    35,    14,    14,    35,    90,
-      32,    37,    36,    34,    39,    85,    27,    28,    29,    30,
-      31,    35,    39,    36,    36,    14,    36,    18,    37,    35,
-     120,   112,   120,    37,    37,    40,    12,    38,    14,    35,
-      40,    17,    36,    19,    37,   113,   127,   117,    24,    25,
-      36,    27,    28,    29,    30,    31,    17,    12,    34,    14,
-      36,    25,    17,    37,    19,   137,   105,   117,    -1,    24,
+       8,    38,    27,    28,    29,    30,    31,     7,     8,    39,
+      35,    20,    21,    34,    37,    35,    35,    14,    35,    90,
+      32,    14,    35,    39,    39,    85,    27,    28,    29,    30,
+      31,    34,    36,    14,    36,    40,    25,    36,    36,    35,
+     120,   112,   120,    37,    18,    37,    12,    38,    14,    35,
+      40,    17,    37,    19,    36,   113,   127,   117,    24,    25,
+      37,    27,    28,    29,    30,    31,    36,    12,    34,    14,
+      36,    17,    17,    37,    19,   137,   105,   117,    -1,    24,
       25,    -1,    27,    28,    29,    30,    31,    -1,    -1,    34
 };
 
@@ -714,11 +770,11 @@ static const yytype_uint8 yystos[] =
 {
        0,    12,    14,    17,    19,    24,    25,    27,    28,    29,
       30,    31,    34,    36,    42,    43,    44,    50,    53,    56,
-      58,    70,    77,    79,    82,    83,    88,    57,    33,    59,
+      58,    70,    77,    79,    82,    83,    88,    57,    33,    34,
       34,    34,    34,    45,    46,    47,    48,    49,    14,    56,
       84,     0,    56,    14,     6,     7,     8,    39,    42,    43,
-      82,    56,    34,    14,    56,    80,    35,    44,    83,    85,
-      32,    51,    89,    56,    56,    56,    39,    54,    56,    35,
+      82,    56,    56,    14,    56,    80,    35,    44,    83,    85,
+      32,    51,    89,    56,    56,    56,    39,    54,    59,    35,
       35,    14,    53,    14,    43,    82,    37,    52,    90,    55,
       60,    71,    78,    39,    39,    34,    91,    35,    36,    36,
       81,    35,    44,    86,    36,    36,    72,    85,    56,    14,
@@ -1540,462 +1596,462 @@ yyreduce:
         case 2:
 
 /* Line 1455 of yacc.c  */
-#line 106 "main.y"
+#line 162 "main.y"
     { printf("%d\n", (yyvsp[(2) - (3)].TYPE_NODE)->value.intVal); ;}
     break;
 
   case 6:
 
 /* Line 1455 of yacc.c  */
-#line 111 "main.y"
+#line 167 "main.y"
     {;;}
     break;
 
   case 11:
 
 /* Line 1455 of yacc.c  */
-#line 124 "main.y"
+#line 180 "main.y"
     {printf("int data type \n");;}
     break;
 
   case 12:
 
 /* Line 1455 of yacc.c  */
-#line 124 "main.y"
+#line 180 "main.y"
     { (yyval.TYPE_NODE) = createIntNode(0); ;}
     break;
 
   case 13:
 
 /* Line 1455 of yacc.c  */
-#line 125 "main.y"
+#line 181 "main.y"
     {printf("float data type \n");;}
     break;
 
   case 14:
 
 /* Line 1455 of yacc.c  */
-#line 125 "main.y"
+#line 181 "main.y"
     { (yyval.TYPE_NODE) = createNode("float"); ;}
     break;
 
   case 15:
 
 /* Line 1455 of yacc.c  */
-#line 126 "main.y"
+#line 182 "main.y"
     {printf("string data type \n");;}
     break;
 
   case 16:
 
 /* Line 1455 of yacc.c  */
-#line 126 "main.y"
+#line 182 "main.y"
     { (yyval.TYPE_NODE) = createNode("string"); ;}
     break;
 
   case 17:
 
 /* Line 1455 of yacc.c  */
-#line 127 "main.y"
+#line 183 "main.y"
     {printf("bool data type \n");;}
     break;
 
   case 18:
 
 /* Line 1455 of yacc.c  */
-#line 127 "main.y"
+#line 183 "main.y"
     { (yyval.TYPE_NODE) = createNode("bool"); ;}
     break;
 
   case 19:
 
 /* Line 1455 of yacc.c  */
-#line 128 "main.y"
+#line 184 "main.y"
     {printf("void data type \n");;}
     break;
 
   case 20:
 
 /* Line 1455 of yacc.c  */
-#line 128 "main.y"
+#line 184 "main.y"
     { ; ;}
     break;
 
   case 21:
 
 /* Line 1455 of yacc.c  */
-#line 131 "main.y"
+#line 187 "main.y"
     {checkSameScope((yyvsp[(2) - (2)].TYPE_NODE));  insert((yyvsp[(2) - (2)].TYPE_NODE), (yyvsp[(1) - (2)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]); ;}
     break;
 
   case 22:
 
 /* Line 1455 of yacc.c  */
-#line 131 "main.y"
+#line 187 "main.y"
     {printf("inside decleration \n");;}
     break;
 
   case 23:
 
 /* Line 1455 of yacc.c  */
-#line 131 "main.y"
+#line 187 "main.y"
     {printSymbolTable();;}
     break;
 
   case 24:
 
 /* Line 1455 of yacc.c  */
-#line 133 "main.y"
+#line 189 "main.y"
     {printf("inside assignment \n");;}
     break;
 
   case 25:
 
 /* Line 1455 of yacc.c  */
-#line 133 "main.y"
+#line 189 "main.y"
     {checkOutOfScope((yyvsp[(1) - (4)].TYPE_NODE)); checkConst((yyvsp[(1) - (4)].TYPE_NODE)); ;}
     break;
 
   case 26:
 
 /* Line 1455 of yacc.c  */
-#line 133 "main.y"
+#line 189 "main.y"
     {printSymbolTable();;}
     break;
 
   case 27:
 
 /* Line 1455 of yacc.c  */
-#line 137 "main.y"
+#line 193 "main.y"
     {printf("integer");;}
     break;
 
   case 28:
 
 /* Line 1455 of yacc.c  */
-#line 137 "main.y"
+#line 193 "main.y"
     { (yyval.TYPE_NODE) = createIntNode((yyvsp[(1) - (2)].TYPE_INT)); ;}
     break;
 
   case 29:
 
 /* Line 1455 of yacc.c  */
-#line 138 "main.y"
+#line 194 "main.y"
     { (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (3)].TYPE_NODE),(yyvsp[(3) - (3)].TYPE_NODE),'+'); ;}
     break;
 
   case 30:
 
 /* Line 1455 of yacc.c  */
-#line 139 "main.y"
+#line 195 "main.y"
     { (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (3)].TYPE_NODE),(yyvsp[(3) - (3)].TYPE_NODE),'-');;}
     break;
 
   case 31:
 
 /* Line 1455 of yacc.c  */
-#line 140 "main.y"
+#line 196 "main.y"
     { (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (3)].TYPE_NODE),(yyvsp[(3) - (3)].TYPE_NODE),"==");;}
     break;
 
   case 32:
 
 /* Line 1455 of yacc.c  */
-#line 141 "main.y"
+#line 197 "main.y"
     {(yyval.TYPE_NODE) = (yyvsp[(2) - (3)].TYPE_NODE);;}
     break;
 
   case 33:
 
 /* Line 1455 of yacc.c  */
-#line 142 "main.y"
+#line 198 "main.y"
     {printf("hello identifier  \n");;}
     break;
 
   case 34:
 
 /* Line 1455 of yacc.c  */
-#line 151 "main.y"
-    {printf("IF is detected \n");;}
+#line 207 "main.y"
+    {checkConstIF((yyvsp[(3) - (3)].TYPE_NODE)); quadJumpFalseLabel(++labelNum);}
     break;
 
   case 35:
 
 /* Line 1455 of yacc.c  */
-#line 151 "main.y"
+#line 207 "main.y"
     {printf("IF () is detected \n");;}
     break;
 
   case 36:
 
 /* Line 1455 of yacc.c  */
-#line 151 "main.y"
+#line 207 "main.y"
     {enterScope();;}
     break;
 
   case 37:
 
 /* Line 1455 of yacc.c  */
-#line 151 "main.y"
+#line 207 "main.y"
     {printf("IF (){} is detected \n");;}
     break;
 
   case 38:
 
 /* Line 1455 of yacc.c  */
-#line 151 "main.y"
-    {exitScope();;}
+#line 207 "main.y"
+    {exitScope();quadJumpEndLabel();quadPopLabel();;}
     break;
 
   case 39:
 
 /* Line 1455 of yacc.c  */
-#line 151 "main.y"
+#line 207 "main.y"
     {;;}
     break;
 
   case 40:
 
 /* Line 1455 of yacc.c  */
-#line 153 "main.y"
+#line 209 "main.y"
     {printf("inside bare else  \n");;}
     break;
 
   case 41:
 
 /* Line 1455 of yacc.c  */
-#line 153 "main.y"
+#line 209 "main.y"
     {;;}
     break;
 
   case 42:
 
 /* Line 1455 of yacc.c  */
-#line 154 "main.y"
+#line 210 "main.y"
     {;;}
     break;
 
   case 43:
 
 /* Line 1455 of yacc.c  */
-#line 154 "main.y"
+#line 210 "main.y"
     {printf("inside else  \n");;}
     break;
 
   case 44:
 
 /* Line 1455 of yacc.c  */
-#line 154 "main.y"
+#line 210 "main.y"
     {;;}
     break;
 
   case 45:
 
 /* Line 1455 of yacc.c  */
-#line 155 "main.y"
+#line 211 "main.y"
     {enterScope();;}
     break;
 
   case 46:
 
 /* Line 1455 of yacc.c  */
-#line 155 "main.y"
+#line 211 "main.y"
     {exitScope();;}
     break;
 
   case 47:
 
 /* Line 1455 of yacc.c  */
-#line 155 "main.y"
+#line 211 "main.y"
     {printf("else {} detected \n");;}
     break;
 
   case 48:
 
 /* Line 1455 of yacc.c  */
-#line 158 "main.y"
+#line 214 "main.y"
     {printf("switch case passed  \n");;}
     break;
 
   case 49:
 
 /* Line 1455 of yacc.c  */
-#line 158 "main.y"
+#line 214 "main.y"
     {enterScope();;}
     break;
 
   case 50:
 
 /* Line 1455 of yacc.c  */
-#line 158 "main.y"
+#line 214 "main.y"
     {exitScope();;}
     break;
 
   case 53:
 
 /* Line 1455 of yacc.c  */
-#line 164 "main.y"
+#line 220 "main.y"
     {printf("before case \n");;}
     break;
 
   case 54:
 
 /* Line 1455 of yacc.c  */
-#line 164 "main.y"
+#line 220 "main.y"
     {printf("inside case  \n");;}
     break;
 
   case 56:
 
 /* Line 1455 of yacc.c  */
-#line 165 "main.y"
+#line 221 "main.y"
     {;;}
     break;
 
   case 57:
 
 /* Line 1455 of yacc.c  */
-#line 172 "main.y"
+#line 228 "main.y"
     {printf("Found a while loop!\n");}
     break;
 
   case 59:
 
 /* Line 1455 of yacc.c  */
-#line 174 "main.y"
+#line 230 "main.y"
     {printf("for \n");;}
     break;
 
   case 60:
 
 /* Line 1455 of yacc.c  */
-#line 174 "main.y"
+#line 230 "main.y"
     {printf("for \n");;}
     break;
 
   case 62:
 
 /* Line 1455 of yacc.c  */
-#line 180 "main.y"
+#line 236 "main.y"
     {;;}
     break;
 
   case 63:
 
 /* Line 1455 of yacc.c  */
-#line 181 "main.y"
+#line 237 "main.y"
     {;;}
     break;
 
   case 64:
 
 /* Line 1455 of yacc.c  */
-#line 182 "main.y"
+#line 238 "main.y"
     {;;}
     break;
 
   case 65:
 
 /* Line 1455 of yacc.c  */
-#line 187 "main.y"
+#line 243 "main.y"
     {;;}
     break;
 
   case 66:
 
 /* Line 1455 of yacc.c  */
-#line 188 "main.y"
+#line 244 "main.y"
     {;;}
     break;
 
   case 67:
 
 /* Line 1455 of yacc.c  */
-#line 189 "main.y"
+#line 245 "main.y"
     {;;}
     break;
 
   case 68:
 
 /* Line 1455 of yacc.c  */
-#line 190 "main.y"
+#line 246 "main.y"
     {;;}
     break;
 
   case 69:
 
 /* Line 1455 of yacc.c  */
-#line 191 "main.y"
+#line 247 "main.y"
     {enterScope();;}
     break;
 
   case 70:
 
 /* Line 1455 of yacc.c  */
-#line 191 "main.y"
+#line 247 "main.y"
     {exitScope();;}
     break;
 
   case 71:
 
 /* Line 1455 of yacc.c  */
-#line 195 "main.y"
+#line 251 "main.y"
     {printf("inside code block \n");;}
     break;
 
   case 72:
 
 /* Line 1455 of yacc.c  */
-#line 198 "main.y"
+#line 254 "main.y"
     {checkSameScope((yyvsp[(2) - (2)].TYPE_NODE)); insert((yyvsp[(2) - (2)].TYPE_NODE), (yyvsp[(1) - (2)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;;}
     break;
 
   case 73:
 
 /* Line 1455 of yacc.c  */
-#line 199 "main.y"
+#line 255 "main.y"
     {checkSameScope((yyvsp[(2) - (2)].TYPE_NODE)); insert((yyvsp[(2) - (2)].TYPE_NODE), (yyvsp[(1) - (2)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]) ;;}
     break;
 
   case 75:
 
 /* Line 1455 of yacc.c  */
-#line 201 "main.y"
+#line 257 "main.y"
     {checkSameScope((yyvsp[(2) - (2)].TYPE_NODE)); insert((yyvsp[(2) - (2)].TYPE_NODE), (yyvsp[(1) - (2)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope();;}
     break;
 
   case 76:
 
 /* Line 1455 of yacc.c  */
-#line 201 "main.y"
+#line 257 "main.y"
     {printf("here \n");;}
     break;
 
   case 77:
 
 /* Line 1455 of yacc.c  */
-#line 201 "main.y"
+#line 257 "main.y"
     {exitScope();;}
     break;
 
   case 78:
 
 /* Line 1455 of yacc.c  */
-#line 203 "main.y"
+#line 259 "main.y"
     {printf("definitions with params  \n");;}
     break;
 
   case 79:
 
 /* Line 1455 of yacc.c  */
-#line 204 "main.y"
+#line 260 "main.y"
     {printf("definitions without params  \n");;}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 1999 "main.tab.c"
+#line 2055 "main.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -2207,7 +2263,7 @@ yyreturn:
 
 
 /* Line 1675 of yacc.c  */
-#line 207 "main.y"
+#line 263 "main.y"
 
 
 void yyerror(char *s) {
@@ -2343,6 +2399,14 @@ void checkConst(char name) {
         }
     }
 }
+//check if the if conditions is constant or not
+void checkConstIF(struct nodeType* node){
+    if(node->isConst==1){
+        semanticError(CONSTANT_IF, node->value.boolVal !=0);
+    }
+
+}
+
 // Print the symbol table
 void printSymbolTable() {
     for(int i=0; i<sym_table_idx ;i++) {
@@ -2350,6 +2414,33 @@ void printSymbolTable() {
     }
 }
 
+////////////////  QUAD GENERATION //////////////////////
+// jump to the first false label in the stack
+void quadJumpFalseLabel(int labelNum)
+{
+    printf("Quads(%d) \tJF Label_%d\n", line, labelNum);
+    /* push the labelNum to the stack */
+    labelStack[labelStackPointer++] = labelNum;
+}
+// jump to the first end label in the stack
+void quadJumpEndLabel()
+{
+    /* get last  endLabelNum from the stack*/
+    int endLabelNum = endLabelStack[endLabelstackPointer];
+    printf("Quads(%d) \tJMP EndLabel_%d\n", line, endLabelNum);   
+}
+// pop the last label from the stack as condition is true
+void quadPopLabel(){
+    if (labelStackPointer < 0){
+            printf("Quads(%d) Error: No end label to add. Segmenration Fault\n", line);
+            return;
+    }
+    /* get the last labelNum from the stack */
+    int labelNum = labelStack[--labelStackPointer];
+    
+    printf("Quads(%d) Label_%d:\n",line, labelNum);
+       
+}
 int main(void) {
     yyparse();
     return 0;

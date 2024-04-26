@@ -425,8 +425,9 @@ char *yytext;
     #include "main.tab.h"
     #include <stdio.h>
     void yyerror(char *);
+    extern int line =1;
 /*--Some Definitions--*/
-#line 430 "lex.yy.c"
+#line 431 "lex.yy.c"
 
 /* Macros after this point can all be overridden by user definitions in
  * section 1.
@@ -577,9 +578,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
 
-#line 12 "main.l"
+#line 13 "main.l"
 
-#line 583 "lex.yy.c"
+#line 584 "lex.yy.c"
 
 	if ( yy_init )
 		{
@@ -664,160 +665,160 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 13 "main.l"
-; /*ignore new lines and processed to the next line*/ 
+#line 14 "main.l"
+line++; /*ignore new lines and processed to the next line*/ 
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 14 "main.l"
+#line 15 "main.l"
 {return yytext[0];}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 15 "main.l"
+#line 16 "main.l"
 ; /*ignore spaces*/
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 16 "main.l"
+#line 17 "main.l"
 { yylval.TYPE_INT = atoi(yytext); return INTEGER;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 17 "main.l"
+#line 18 "main.l"
 {yylval.TYPE_FLOAT = atof(yytext); return FLOAT_NUMBER;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 18 "main.l"
+#line 19 "main.l"
 {return *yytext;} /*just return the operator*/
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 19 "main.l"
+#line 20 "main.l"
 {return IF;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 20 "main.l"
+#line 21 "main.l"
 {return ELSE;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 21 "main.l"
+#line 22 "main.l"
 {return EQ;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 22 "main.l"
+#line 23 "main.l"
 {return NEQ;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 23 "main.l"
+#line 24 "main.l"
 {return AND;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 24 "main.l"
+#line 25 "main.l"
 {return OR;}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 25 "main.l"
+#line 26 "main.l"
 {return NOT;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 26 "main.l"
+#line 27 "main.l"
 {return SWITCH;}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 27 "main.l"
+#line 28 "main.l"
 {return CASE;}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 28 "main.l"
+#line 29 "main.l"
 {return DEFAULT;}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 29 "main.l"
+#line 30 "main.l"
 {return WHILE;}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 30 "main.l"
+#line 31 "main.l"
 {return FOR;}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 31 "main.l"
+#line 32 "main.l"
 {return RETURN;}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 32 "main.l"
+#line 33 "main.l"
 {return INT_DATA_TYPE;}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 33 "main.l"
+#line 34 "main.l"
 {return FLOAT_DATA_TYPE;}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 34 "main.l"
+#line 35 "main.l"
 {return STRING_DATA_TYPE;}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 35 "main.l"
+#line 36 "main.l"
 {return BOOL_DATA_TYPE;}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 36 "main.l"
+#line 37 "main.l"
 {return CONST;}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 37 "main.l"
+#line 38 "main.l"
 {return VOID_DATA_TYPE;}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 38 "main.l"
+#line 39 "main.l"
 {return BREAK;}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 39 "main.l"
+#line 40 "main.l"
 {yylval.TYPE_INT = yytext[0]; return IDENTIFIER; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 40 "main.l"
+#line 41 "main.l"
 {return  yylval.TYPE_BOOL=1; return TRUE_VAL;}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 41 "main.l"
+#line 42 "main.l"
 {return  yylval.TYPE_BOOL=0; return FALSE_VAL;}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 43 "main.l"
+#line 44 "main.l"
 yyerror("Unknown character");
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 44 "main.l"
+#line 45 "main.l"
 ECHO;
 	YY_BREAK
-#line 821 "lex.yy.c"
+#line 822 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1703,7 +1704,7 @@ int main()
 	return 0;
 	}
 #endif
-#line 44 "main.l"
+#line 45 "main.l"
 
 
 int yywrap(void) {

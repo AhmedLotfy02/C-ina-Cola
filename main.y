@@ -6,12 +6,68 @@
     #include <string.h>
     void yyerror (char *);       
     int yylex(void);
-    
+    void printSymbolTable();
+    extern int line;
+    #define SHOW_SEMANTIC_ERROR 1
+    #define TYPE_MISMATCH 1
+    #define UNDECLARED 2
+    #define UNINITIALIZED 3
+    #define UNUSED 4
+    #define REDECLARED 5
+    #define CONSTANT 6
+    #define OUT_OF_SCOPE 7
+    #define CONSTANT_IF 8
+    void semanticError(int semanticErr,char c){
+        int errLine=line;
+        switch(semanticErr){
+            case TYPE_MISMATCH:
+                printf("Semanic Error: Type mismatch at line %d\n",errLine);
+                break;
+            case UNDECLARED:
+                printf("Semanic Error: Variable %c undeclared at line %d\n",c,errLine);
+                break;
+            case UNINITIALIZED:
+                printf("Semanic Error: Variable %c uninitialized at line %d\n",c,errLine);
+                break;
+            case UNUSED:
+                printf("Warning: Variable %c declared but not used at line %d\n",c,errLine);
+                break;
+            case REDECLARED:
+                printf("Semanic Error: Variable %c redeclared at line %d\n",c,errLine);
+                break;
+            case CONSTANT:
+                printf("Semanic Error: Variable %c is constant at line %d\n",c,errLine);
+                break;
+            case OUT_OF_SCOPE:
+                printf("Semanic Error: Variable %c is out of scope at line %d\n",c,errLine);
+                break;
+            case CONSTANT_IF:
+                printf("Semanic Error: Variable %c is constant in if condition at line %d\n",c,errLine);
+                break;
+            default:
+                printf("Semanic Error: Unknown error at line %d\n",errLine);
+                break;
+        }
+        printSymbolTable();
+    }
 
-
+    // Label Stack for quads generation    
+    #define MAX_STACK_SIZE 100
+    int labelNum = 0;
+    int labelStackPointer = -1;
+    int labelStack[MAX_STACK_SIZE];
+    // End Label Stack for tracking last label
+    int endLabelNum = 0;
+    int endLabelstackPointer = -1;
+    int endLabelStack[MAX_STACK_SIZE];
+    // Quad Functions
+    void quadJumpFalseLabel(int labelNum);
+    void quadJumpEndLabel();
+    void quadPopLabel();
     // nodeType as in section
     struct nodeType{
         char *type;
+        int isConst; // 1 if constant 0 if not constant 
         union{
             int intVal;
             float floatVal;
@@ -19,7 +75,7 @@
             int boolVal;
 
         } value;
-
+        
     };
     // Symbol Table
     struct symbol {
@@ -52,8 +108,8 @@
     struct nodeType* createNode(char* type);
     void checkSameScope(char name);
     void checkConst(char name);
-    void printSymbolTable();
     void checkOutOfScope(char name);
+    void checkConstIF(struct nodeType* node);
 %}
 /* Yacc definitions */
 
@@ -148,7 +204,7 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
 
 /* ----------------Conditions--------------- */
-ifCondition  : IF {printf("IF is detected \n");}  '(' expr {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {exitScope();} elseCondition {;}
+ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum)} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {exitScope();quadJumpEndLabel();quadPopLabel();} elseCondition {;}
              ;
 elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
@@ -339,6 +395,14 @@ void checkConst(char name) {
         }
     }
 }
+//check if the if conditions is constant or not
+void checkConstIF(struct nodeType* node){
+    if(node->isConst==1){
+        semanticError(CONSTANT_IF, node->value.boolVal !=0);
+    }
+
+}
+
 // Print the symbol table
 void printSymbolTable() {
     for(int i=0; i<sym_table_idx ;i++) {
@@ -346,6 +410,33 @@ void printSymbolTable() {
     }
 }
 
+////////////////  QUAD GENERATION //////////////////////
+// jump to the first false label in the stack
+void quadJumpFalseLabel(int labelNum)
+{
+    printf("Quads(%d) \tJF Label_%d\n", line, labelNum);
+    /* push the labelNum to the stack */
+    labelStack[labelStackPointer++] = labelNum;
+}
+// jump to the first end label in the stack
+void quadJumpEndLabel()
+{
+    /* get last  endLabelNum from the stack*/
+    int endLabelNum = endLabelStack[endLabelstackPointer];
+    printf("Quads(%d) \tJMP EndLabel_%d\n", line, endLabelNum);   
+}
+// pop the last label from the stack as condition is true
+void quadPopLabel(){
+    if (labelStackPointer < 0){
+            printf("Quads(%d) Error: No end label to add. Segmenration Fault\n", line);
+            return;
+    }
+    /* get the last labelNum from the stack */
+    int labelNum = labelStack[--labelStackPointer];
+    
+    printf("Quads(%d) Label_%d:\n",line, labelNum);
+       
+}
 int main(void) {
     yyparse();
     return 0;

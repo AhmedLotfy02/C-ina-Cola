@@ -3,6 +3,7 @@
     #include "main.tab.h"
     #include <stdio.h>
     void yyerror(char *);
+    extern int line =1;
 %}
 /*--Some Definitions--*/
 DIGIT [0-9]
@@ -10,7 +11,7 @@ SPACE [ \r\t]
 NEW_LINE \n
 arithmeticOps   [/+*%-]
 %%
-{NEW_LINE}  ; /*ignore new lines and processed to the next line*/ 
+{NEW_LINE}   line++; /*ignore new lines and processed to the next line*/ 
 [(){}:=;]        {return yytext[0];}
 {SPACE}     ; /*ignore spaces*/
 {DIGIT}+ { yylval.TYPE_INT = atoi(yytext); return INTEGER;}

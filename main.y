@@ -1,13 +1,18 @@
 %{
+    /*////////////////////////////////
+    TODO: add Enum - typedef - repeat until - semanticError
+    ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
     #include <stdlib.h>
     #include <ctype.h>
     #include <string.h>
+    
     void yyerror (char *);       
     int yylex(void);
     void printSymbolTable();
     extern int line;
+    
     #define SHOW_SEMANTIC_ERROR 1
     #define TYPE_MISMATCH 1
     #define UNDECLARED 2
@@ -17,6 +22,7 @@
     #define CONSTANT 6
     #define OUT_OF_SCOPE 7
     #define CONSTANT_IF 8
+    
     void semanticError(int semanticErr,char c){
         int errLine=line;
         switch(semanticErr){
@@ -56,16 +62,19 @@
     int labelNum = 0;
     int labelStackPointer = -1;
     int labelStack[MAX_STACK_SIZE];
+    
     // End Label Stack for tracking last label
     int endLabelNum = 0;
     int endLabelstackPointer = -1;
     int endLabelStack[MAX_STACK_SIZE];
+    
     // Quad Functions
     void quadJumpFalseLabel(int labelNum);
     void quadJumpEndLabel();
     void quadPopLabel();
     void quadPushEndLabel(int endLabelNum);
     void quadPopEndLabel();
+    
     // nodeType as in section
     struct nodeType{
         char *type;
@@ -118,44 +127,66 @@
 // Union here defines the expected values in symbol table 
 %union {
         int TYPE_INT; 
+        int TYPE_BOOL;
+        float TYPE_FLOAT;
+        char* TYPE_STR;
         void* TYPE_VOID;
         char* TYPE_DATA_TYPE;
         struct nodeType* TYPE_NODE;
         char* TYPE_DATA_MODIFIER;
-        int TYPE_BOOL;
-        float TYPE_FLOAT;
 ;}
 
 //Precedence of Operators (the upper is the lower precedence)
+%right '='
 %left  AND OR 
 %left EQ NEQ
+%left GT GEQ LT LEQ 
 %left  '+' '-' 
 %right NOT 
-%left  '*' '/' 
+%left  '*' '/' '%' 
 
 //-----------TOKENS-------------
 // Data Types
 %token <TYPE_INT> INTEGER
 %token <TYPE_FLOAT> FLOAT_NUMBER
-%token <TYPE_NODE> IDENTIFIER
-%token <TYPE_DATA_MODIFIER> CONST
-%token RETURN
+%token <TYPE_STR> STRING
+%token <TYPE_BOOL> TRUE_VAL 
+%token <TYPE_BOOL> FALSE_VAL 
+%token RETURN ENUM 
+
+//------------------------
+//Control Commands
+%token PRINT
+%token ASSERT
+%token EXIT
+
+//------------------------
 //Flow Statements
 %token IF ELSE
 %token SWITCH CASE DEFAULT
-%token <TYPE_BOOL> TRUE_VAL 
-%token <TYPE_BOOL> FALSE_VAL 
+
+//------------------------
 // LOOPS
-%token WHILE FOR BREAK
+%token WHILE FOR BREAK CONTINUE REPEAT UNTIL
+
 //------------------------
 // Return Types
 %type <TYPE_VOID> program codeBlock controlStatement statement statements
-%type <TYPE_NODE> expr assignment
+%type <TYPE_NODE> term expr assignment
+
+
+//------------------------
 // Flow Statements
 %type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop
+
+//------------------------
 // Decleration
+%token <TYPE_DATA_MODIFIER> CONST
 %token <TYPE_DATA_TYPE> INT_DATA_TYPE FLOAT_DATA_TYPE STRING_DATA_TYPE BOOL_DATA_TYPE VOID_DATA_TYPE
 %type <TYPE_NODE> dataType decleration
+%token <TYPE_NODE> IDENTIFIER
+
+//------------------------
 // Functions
 %type <TYPE_VOID> functionArgs functionDefinition functionDefinitionAfter
 
@@ -180,6 +211,7 @@ controlStatement: while
 
 
 /* Decleration */
+dataModifier: CONST         {;}
 
 dataType: INT_DATA_TYPE     {printf("int data type \n");} { $$ = createIntNode(0); }
         | FLOAT_DATA_TYPE   {printf("float data type \n");} { $$ = createNode("float"); }
@@ -189,17 +221,41 @@ dataType: INT_DATA_TYPE     {printf("int data type \n");} { $$ = createIntNode(0
         ;
 /* */
 decleration: dataType IDENTIFIER  {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");} {printSymbolTable();}
+           | dataType IDENTIFIER  '='  expr {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateSymbolVal($2,$4); setInit($2); } {printf("inside decleration \n");} {printSymbolTable();} //TODO: Implement nodeNodeTypeCheck($1, $4); updateSymbolVal($2,$4); setInit($2); 
+           | dataModifier dataType IDENTIFIER  '='  expr {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateSymbolVal($3,$5); setInit($3); } {printf("inside decleration \n");} {printSymbolTable();} {printSymbolTable();}            
            ;
-assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {checkOutOfScope($1); checkConst($1); } {printSymbolTable();}
+assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {checkOutOfScope($1); checkConst($1); symbolNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateSymbolVal($1,$3); $$ = $3;} {printSymbolTable();}
           ;
         ;
 expr:
-        INTEGER   {printf("integer");}                { $$ = createIntNode($1); } 
-        | expr '+' expr           { $$ = arithmatic($1,$3,'+'); }
-        | expr '-' expr           { $$ = arithmatic($1,$3,'-');}
-        | expr EQ expr            { $$ = doComparison($1,$3,"==");}
-        | '(' expr ')'             {$$ = $2;}
-        | IDENTIFIER               {printf("hello identifier  \n");}
+        term                      { $$ = $1; } 
+        | '(' dataType ')' term   { $$ = castingTo($4, $2->type);}//TODO: Implement castingTo($4, $2->type) $$->isConst = $4->isConst;
+        | '-' term                { $$ = Negation($2); }//TODO: Implement Negation($2) $$->isConst=$2->isConst;
+        | expr '+' expr           { $$ = arithmatic($1,$3,'+'); } //TODO: Continue Implement of arithmatic() 
+        | expr '-' expr           { $$ = arithmatic($1,$3,'-'); }
+        | expr '*' expr           { $$ = arithmatic($1,$3,'*'); }
+        | expr '/' expr           { $$ = arithmatic($1,$3,'/'); }
+        | expr '%' expr           { $$ = arithmatic($1,$3,'%'); }
+        | expr EQ expr            { $$ = doComparison($1,$3,"==");} //TODO: Continue Implement of doComparison()
+        | expr NEQ expr           { $$ = doComparison($1,$3,"!=");}
+        | expr LT expr            { $$ = doComparison($1,$3,"<"); }
+        | expr GT expr            { $$ = doComparison($1,$3,">"); }
+        | expr GEQ expr           { $$ = doComparison($1,$3,">="); }
+        | expr LEQ expr           { $$ = doComparison($1,$3,"<="); }
+        | expr AND expr           { $$ = logical($1,$3,'&'); } //TODO: Continue Implement of logical()
+        | expr OR expr            { $$ = logical($1,$3,'|'); }
+        | NOT expr                { $$ = logical($2,NULL,'!'); }
+        | '(' expr ')'            { $$ = $2;}
+        ;
+
+term: 
+        INTEGER                   {printf("integer");}  { $$ = createIntNode($1);    $$->value.intVal = $1;}
+        | FLOAT_NUMBER            {printf("float");}    { $$ = createNode("float");  $$->value.floatVal = $1;}
+        | STRING                  {printf("string\n");} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
+        | TRUE_VAL                {printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
+        | FALSE_VAL               {printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
+        | IDENTIFIER              {printf("hello identifier  \n");} {checkOutOfScope($1); checkInitialized($1); $$ = idValue($1); setUsed($1);}//TODO: checkInitialized,setUsed, idValue(char name)=> $$->isConst=isConstVar($1);,   
+        | '(' term ')'            { $$ = $2; }
         ;
 
 
@@ -232,6 +288,9 @@ case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");
 while : WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
       ;
 forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
+        | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
+        | FOR '(' IDENTIFIER ':' expr '<-' expr ')' '{' codeBlock '}' //TODO: implement This assignment
+        
        ;
 
 /*---------------------------------------*/
@@ -240,7 +299,14 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
 statement: assignment {;}
             | expr {printf("aloo\n");}
             | decleration {;}
-        ;
+            | EXIT 		                        {exit(EXIT_SUCCESS);}
+            | BREAK 		                    {;} //TODO: 
+            | CONTINUE 		                    {;} //TODO:
+            | RETURN 		                    {;} //TODO:
+            | RETURN exp 		                {;} //TODO:
+            | PRINT '(' IDENTIFIER ')' 		    {printNode(symbolVal($3)); setUsed($3);} //TODO: implement printNode
+            | PRINT '(' exp ')' 		        {printNode($3);}
+            ;            
 /*---------------------------------------*/
 
 /* ------------Statements----------------- */
@@ -249,11 +315,15 @@ statements: statement ';' {;}
             | statements statement ';' {;}
             |'{'{enterScope();} codeBlock '}'{exitScope();}
             | statements controlStatement {printf("state+controlState");}
+            | statements '{'{enterScope();} codeBlock '}'{exitScope();} {;}
         ;
 /*---------------------------------------*/
+
 /* ------------Code Block----------------- */
 codeBlock:  statements {printf("inside code block \n");}
-         ;/*---------------------------------------*/
+         ;
+/*---------------------------------------*/
+
 /* ------------Functions----------------- */
 functionArgs: dataType IDENTIFIER   {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
             | dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ','  functionArgs
@@ -275,6 +345,7 @@ void yyerror(char *s) {
 struct nodeType* createIntNode(int value) {
     struct nodeType* node = malloc(sizeof(struct nodeType));
     node->type = "int";
+    node->isConst = 1;
     node->value.intVal = value;
     return node;
 }
@@ -282,6 +353,7 @@ struct nodeType* createIntNode(int value) {
 struct nodeType* createNode(char* type) {
     struct nodeType* p = malloc(sizeof(struct nodeType));
     p->type = type;
+    node->isConst = 1;
     p->value.intVal = 0;
     return p;
 }
@@ -310,7 +382,7 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
           
         }
     }
-   
+   //TODO: Set P->isCont (($1->isConst)&&($3->isConst))
     return p;
 }
 

@@ -72,7 +72,7 @@ arithmeticOps   [/+*%-]
 "exit"				    {return EXIT;} 
 "return"                {return RETURN;}
 
-[a-zA-Z_][a-zA-Z0-9_]*  {yylval.TYPE_INT = yytext[0]; return IDENTIFIER; }
+[a-zA-Z_][a-zA-Z0-9_]*  {yylval.TYPE_STR = strdup(yytext); return IDENTIFIER;}
 "true"                  {return  yylval.TYPE_BOOL=1; return TRUE_VAL;}
 "false"                 {return  yylval.TYPE_BOOL=0; return FALSE_VAL;}
 

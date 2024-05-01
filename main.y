@@ -1,6 +1,6 @@
 %{
     /*////////////////////////////////
-    TODO: add Enum - typedef - repeat until - semanticError
+    TODO: add Enum - typedef - repeat until - semanticError -checkConstIF in all expr rules - printList & conccatenate strings
     ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
@@ -8,7 +8,7 @@
     #include <ctype.h>
     #include <string.h>
     
-    void yyerror (char *);       
+    void yyerror (char*);       
     int yylex(void);
     void printSymbolTable();
     extern int line;
@@ -23,32 +23,32 @@
     #define OUT_OF_SCOPE 7
     #define CONSTANT_IF 8
     
-    void semanticError(int semanticErr,char c){
+    void semanticError(int semanticErr,char* c){
         int errLine=line;
         switch(semanticErr){
             case TYPE_MISMATCH:
                 printf("Semanic Error: Type mismatch at line %d\n",errLine);
                 break;
             case UNDECLARED:
-                printf("Semanic Error: Variable %c undeclared at line %d\n",c,errLine);
+                printf("Semanic Error: Variable %s undeclared at line %d\n",c,errLine);
                 break;
             case UNINITIALIZED:
-                printf("Semanic Error: Variable %c uninitialized at line %d\n",c,errLine);
+                printf("Semanic Error: Variable %s uninitialized at line %d\n",c,errLine);
                 break;
             case UNUSED:
-                printf("Warning: Variable %c declared but not used at line %d\n",c,errLine);
+                printf("Warning: Variable %s declared but not used at line %d\n",c,errLine);
                 break;
             case REDECLARED:
-                printf("Semanic Error: Variable %c redeclared at line %d\n",c,errLine);
+                printf("Semanic Error: Variable %s redeclared at line %d\n",c,errLine);
                 break;
             case CONSTANT:
-                printf("Semanic Error: Variable %c is constant at line %d\n",c,errLine);
+                printf("Semanic Error: Variable %s is constant at line %d\n",c,errLine);
                 break;
             case OUT_OF_SCOPE:
-                printf("Semanic Error: Variable %c is out of scope at line %d\n",c,errLine);
+                printf("Semanic Error: Variable %s is out of scope at line %d\n",c,errLine);
                 break;
             case CONSTANT_IF:
-                printf("Semanic Error: Variable %c is constant in if condition at line %d\n",c,errLine);
+                printf("Semanic Error: Variable %s is constant in if condition at line %d\n",c,errLine);
                 break;
             default:
                 printf("Semanic Error: Unknown error at line %d\n",errLine);
@@ -75,6 +75,7 @@
     void quadPushEndLabel(int endLabelNum);
     void quadPopEndLabel();
     
+    ////////////////////////////////////////////////////////////////////////
     // nodeType as in section
     struct nodeType{
         char *type;
@@ -90,7 +91,7 @@
     };
     // Symbol Table
     struct symbol {
-        char name;
+        char *name;
         char *type;
         union {
                 int intVal;
@@ -102,7 +103,7 @@
     };
     struct symbol symbol_Table [100]; // 26 for lower case, 26 for upper case
     int sym_table_idx = 0;
-    void insert(char name, char* type, int isConst, int isInit, int isUsed, int scope);
+    void insert(char* name, char* type, int isConst, int isInit, int isUsed, int scope);
     ///////////////////////////////////////////////
     // Scope Table
     int scope_idx = 1;
@@ -113,13 +114,26 @@
     ///////////////////////////////////////////////
     // Functions
     int argCount = 0;
-    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op);
+    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op); //TODO: Continue Implement of arithmatic() 
+    struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op); //TODO: Continue Implement of logical()
+    struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op); //TODO: Continue Implement of doComparison()
+    struct nodeType* castingTo(struct nodeType* term, char *type); //TODO: Implement castingTo($4, $2->type) $$->isConst = $4->isConst;
+    struct nodeType* Negation(struct nodeType* term);     //TODO: Implement Negation($2) $$->isConst=$2->isConst;
     struct nodeType* createIntNode(int value);
-    struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op);
     struct nodeType* createNode(char* type);
-    void checkSameScope(char name);
-    void checkConst(char name);
-    void checkOutOfScope(char name);
+    void identifierNodeTypeCheck(char* name , struct nodeType* node);//TODO: 
+    void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2);//TODO: 
+    void updateIdentifierValue(char* name, struct nodeType* node);//TODO: 
+    struct nodeType* identifierValue(char* name) //TODO: & create nodeType* p.value-> & p.type-> 
+    void setInit(char* name); //TODO:
+    void setUsed(char* name); //TODO:
+    void printNode(struct nodeType* node); //TODO:
+    void returnNode(struct nodeType* node); //TODO:    
+    void checkInitialized(char* name); //TODO:
+    void checkUsed(char* name); //TODO:
+    void checkSameScope(char* name);
+    void checkOutOfScope(char* name);
+    void checkConst(char* name);
     void checkConstIF(struct nodeType* node);
 %}
 /* Yacc definitions */
@@ -184,7 +198,7 @@
 %token <TYPE_DATA_MODIFIER> CONST
 %token <TYPE_DATA_TYPE> INT_DATA_TYPE FLOAT_DATA_TYPE STRING_DATA_TYPE BOOL_DATA_TYPE VOID_DATA_TYPE
 %type <TYPE_NODE> dataType decleration
-%token <TYPE_NODE> IDENTIFIER
+%token <TYPE_STR> IDENTIFIER
 
 //------------------------
 // Functions
@@ -221,28 +235,28 @@ dataType: INT_DATA_TYPE     {printf("int data type \n");} { $$ = createIntNode(0
         ;
 /* */
 decleration: dataType IDENTIFIER  {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");} {printSymbolTable();}
-           | dataType IDENTIFIER  '='  expr {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateSymbolVal($2,$4); setInit($2); } {printf("inside decleration \n");} {printSymbolTable();} //TODO: Implement nodeNodeTypeCheck($1, $4); updateSymbolVal($2,$4); setInit($2); 
-           | dataModifier dataType IDENTIFIER  '='  expr {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateSymbolVal($3,$5); setInit($3); } {printf("inside decleration \n");} {printSymbolTable();} {printSymbolTable();}            
+           | dataType IDENTIFIER  '='  expr {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($2,$4); setInit($2); } {printf("inside decleration \n");} {printSymbolTable();} 
+           | dataModifier dataType IDENTIFIER  '='  expr {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($3,$5); setInit($3); } {printf("inside decleration \n");} {printSymbolTable();} {printSymbolTable();}            
            ;
-assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {checkOutOfScope($1); checkConst($1); symbolNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateSymbolVal($1,$3); $$ = $3;} {printSymbolTable();}
+assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); $$ = $3;} {printSymbolTable();}
           ;
         ;
 expr:
         term                      { $$ = $1; } 
-        | '(' dataType ')' term   { $$ = castingTo($4, $2->type);}//TODO: Implement castingTo($4, $2->type) $$->isConst = $4->isConst;
-        | '-' term                { $$ = Negation($2); }//TODO: Implement Negation($2) $$->isConst=$2->isConst;
-        | expr '+' expr           { $$ = arithmatic($1,$3,'+'); } //TODO: Continue Implement of arithmatic() 
+        | '(' dataType ')' term   { $$ = castingTo($4, $2->type);}
+        | '-' term                { $$ = Negation($2); }
+        | expr '+' expr           { $$ = arithmatic($1,$3,'+'); } 
         | expr '-' expr           { $$ = arithmatic($1,$3,'-'); }
         | expr '*' expr           { $$ = arithmatic($1,$3,'*'); }
         | expr '/' expr           { $$ = arithmatic($1,$3,'/'); }
         | expr '%' expr           { $$ = arithmatic($1,$3,'%'); }
-        | expr EQ expr            { $$ = doComparison($1,$3,"==");} //TODO: Continue Implement of doComparison()
+        | expr EQ expr            { $$ = doComparison($1,$3,"==");} 
         | expr NEQ expr           { $$ = doComparison($1,$3,"!=");}
         | expr LT expr            { $$ = doComparison($1,$3,"<"); }
         | expr GT expr            { $$ = doComparison($1,$3,">"); }
         | expr GEQ expr           { $$ = doComparison($1,$3,">="); }
         | expr LEQ expr           { $$ = doComparison($1,$3,"<="); }
-        | expr AND expr           { $$ = logical($1,$3,'&'); } //TODO: Continue Implement of logical()
+        | expr AND expr           { $$ = logical($1,$3,'&'); } 
         | expr OR expr            { $$ = logical($1,$3,'|'); }
         | NOT expr                { $$ = logical($2,NULL,'!'); }
         | '(' expr ')'            { $$ = $2;}
@@ -254,7 +268,7 @@ term:
         | STRING                  {printf("string\n");} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
         | TRUE_VAL                {printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
         | FALSE_VAL               {printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
-        | IDENTIFIER              {printf("hello identifier  \n");} {checkOutOfScope($1); checkInitialized($1); $$ = idValue($1); setUsed($1);}//TODO: checkInitialized,setUsed, idValue(char name)=> $$->isConst=isConstVar($1);,   
+        | IDENTIFIER              {printf("hello identifier  \n");} {checkOutOfScope($1); checkInitialized($1); $$ = identifierValue($1); setUsed($1);}   
         | '(' term ')'            { $$ = $2; }
         ;
 
@@ -285,7 +299,7 @@ case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");
 /*---------------------------------------*/
 
 /* ----------------Loops--------------- */
-while : WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
+while: WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
       ;
 forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
         | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
@@ -296,16 +310,19 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
 /*---------------------------------------*/
 
 /* ------------Statement----------------- */
+// printList:  expr
+//             | printList ',' expr {/*TODO:*/}
+//             ;
 statement: assignment {;}
             | expr {printf("aloo\n");}
             | decleration {;}
             | EXIT 		                        {exit(EXIT_SUCCESS);}
-            | BREAK 		                    {;} //TODO: 
-            | CONTINUE 		                    {;} //TODO:
-            | RETURN 		                    {;} //TODO:
-            | RETURN exp 		                {;} //TODO:
-            | PRINT '(' IDENTIFIER ')' 		    {printNode(symbolVal($3)); setUsed($3);} //TODO: implement printNode
-            | PRINT '(' exp ')' 		        {printNode($3);}
+            | BREAK 		                    {break;} //TODO: check this 
+            | CONTINUE 		                    {continue;} 
+            | RETURN 		                    {return;} 
+            | RETURN expr 		                {returnNode($2);} //TODO: $$ =(struct nodeType* )returnNode($2);node with return value & type >> How to handle X = func()
+            | PRINT '(' expr ')' 		        {printNode($3);}
+            // | PRINT '(' printList ')' 		    {$$ = $3;} 
             ;            
 /*---------------------------------------*/
 
@@ -398,7 +415,7 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
 }
 
 // Insert the variable in the symbol table
-void insert(char name, char* type, int isConst, int isInit, int isUsed, int scope){
+void insert(char* name, char* type, int isConst, int isInit, int isUsed, int scope){
 
     symbol_Table [sym_table_idx].name = name;
     symbol_Table [sym_table_idx].type = type;
@@ -410,7 +427,7 @@ void insert(char name, char* type, int isConst, int isInit, int isUsed, int scop
     symbol_Table [sym_table_idx].scope = scope;
     ++sym_table_idx;
 
-    printf("SymbolTable() inserted: %c, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
+    printf("SymbolTable() inserted: %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
 }
 // Enter the scope
 void enterScope() {
@@ -423,13 +440,13 @@ void exitScope() {
     scope_idx--;
 }
 // Check if the variable is declared in the same scope
-void checkSameScope(char name) {
+void checkSameScope(char* name) {
     int lvl;
     for(int i=0; i<sym_table_idx ;i++) {
         if(symbol_Table[i].name == name) {
             lvl = symbol_Table[i].scope;
             if(lvl == scopes[scope_idx-1]) {
-                 printf("Error: variable %c already declared in the same scope\n", name); 
+                 printf("Error: variable %s already declared in the same scope\n", name); 
               
             }
         }
@@ -437,7 +454,7 @@ void checkSameScope(char name) {
 }
 
 // Check if the variable is declared in the same scope
-void checkOutOfScope(char name) {
+void checkOutOfScope(char* name) {
     int lvl;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
         if(symbol_Table[i].name == name) {
@@ -449,21 +466,21 @@ void checkOutOfScope(char name) {
             }
         }
     }
-    printf("Error: variable %c is out of scope\n", name);
+    printf("Error: variable %s is out of scope\n", name);
 
 }
 
 // Check if the node is constant or not
-void checkConst(char name) {
+void checkConst(char* name) {
     for(int i=0; i<sym_table_idx ;i++) {
         if(symbol_Table[i].name == name) {
              for(int j=scope_idx-1;j>=0;j--) {
                 if(symbol_Table[i].scope == scopes[j]) {
                     if(symbol_Table[i].isConst == 1) {
-                        printf("Error: variable %c is constant\n", name);
+                        printf("Error: variable %s is constant\n", name);
                     }
                     else{
-                        printf("Variable %c is not constant\n", name);
+                        printf("Variable %s is not constant\n", name);
                         return;
                     }
                 }
@@ -482,7 +499,7 @@ void checkConstIF(struct nodeType* node){
 // Print the symbol table
 void printSymbolTable() {
     for(int i=0; i<sym_table_idx ;i++) {
-        printf("SymbolTable() : %c, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [i].name, symbol_Table [i].isDecl, symbol_Table [i].isConst, i); 
+        printf("SymbolTable() : %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [i].name, symbol_Table [i].isDecl, symbol_Table [i].isConst, i); 
     }
 }
 

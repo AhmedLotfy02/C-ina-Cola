@@ -138,6 +138,8 @@
 %}
 /* Yacc definitions */
 
+%start program // defines the starting symbol
+
 // Union here defines the expected values in symbol table 
 %union {
         int TYPE_INT; 
@@ -305,7 +307,7 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
         | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         | FOR '(' IDENTIFIER ':' expr '<-' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         
-       ;
+       ;// for (i : 0 -> 4)
 
 /*---------------------------------------*/
 

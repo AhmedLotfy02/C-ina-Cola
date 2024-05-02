@@ -26,8 +26,8 @@ arithmeticOps   [/+*%-]
 [(){}:=,;]              {return yytext[0];}
 
 {DIGIT}+                { yylval.TYPE_INT = atoi(yytext); return INTEGER;}
-{FLOAT_NUM}             {yylval.TYPE_FLOAT = atof(yytext); return FLOAT_NUMBER;} //TODO: Check return of atof(yytext);
-{STR}		            {return STRING;}
+{FLOAT_NUM}             { yylval.TYPE_FLOAT = atof(yytext); return FLOAT_NUMBER;} //TODO: Check return of atof(yytext);
+{STR}		            { yylval.TYPE_STR = strdup(yytext); return STRING;}
 
 {arithmeticOps}         {return *yytext;} /*just return the operator*/
 

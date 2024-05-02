@@ -118,11 +118,11 @@
     ///////////////////////////////////////////////
     // Functions
     int argCount = 0;
-    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op); //TODO: Continue Implement of arithmatic() 
-    struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op); //TODO: Continue Implement of logical()
-    struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op); //TODO: Continue Implement of doComparison()
+    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op); 
+    struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op); 
+    struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op); 
     struct nodeType* castingTo(struct nodeType* term, char *type);
-    struct nodeType* Negation(struct nodeType* term);     //TODO: Implement Negation($2) $$->isConst=$2->isConst;
+    struct nodeType* Negation(struct nodeType* term);     
     struct nodeType* createIntNode(int value);
     struct nodeType* createNode(char* type);
     void identifierNodeTypeCheck(char* name , struct nodeType* node); 
@@ -381,43 +381,191 @@ struct nodeType* createNode(char* type) {
     return p;
 }
 
+//------------------------------------------------------------------------------- 
+// Op functions 
+//-------------------------------------------------------------------------------  
+
 // Arithmatic
 struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
-    struct nodeType* p = malloc(sizeof(struct nodeType));
-    if(strcmp(op1->type, "int") == 0 && strcmp(op2->type, "int") == 0){
-        p->type = "int";
-        switch(op){
-            case '+':
-                p->value.intVal = op1->value.intVal + op2->value.intVal;
-                break;
-            case '-':
-                p->value.intVal = op1->value.intVal - op2->value.intVal;
-                break;
-            case '*':
-                p->value.intVal = op1->value.intVal * op2->value.intVal;
-                break;
-            case '/':
-                p->value.intVal = op1->value.intVal / op2->value.intVal;
-                break;
-            case '%':
-                p->value.intVal = op1->value.intVal % op2->value.intVal;
-                break;
-          
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    
+    if(strcmp(op1->type, "int") == 0){
+        if(op2->type == "float"){
+            struct nodeType* float_op1 = malloc(sizeof(struct nodeType));
+            float_op1 = castingTo(op1,"float")
+            final_result->type = "float";
+            switch(op){
+                case '+':
+                    final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
+                    break;
+                case '-':
+                    final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
+                    break;
+                case '*':
+                    final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
+                    break;
+                case '/':
+                    final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
+                    break;   
+            }   
+        }
+        else{
+            struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
+            int_op2 = castingTo(op2,"int")
+            final_result->type = "int";
+            switch(op){
+                case '+':
+                    final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
+                    break;
+                case '-':
+                    final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
+                    break;
+                case '*':
+                    final_result->value.intVal = op1->value.intVal * int_op2->value.intVal;
+                    break;
+                case '/':
+                    final_result->value.intVal = op1->value.intVal / int_op2->value.intVal;
+                    break;  
+                case '%':
+                    final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
+                break; 
+            } 
         }
     }
-   //TODO: Set P->isCont (($1->isConst)&&($3->isConst))
-    return p;
+    else if(strcmp(op1->type, "float") == 0){
+        struct nodeType* float_op2 = malloc(sizeof(struct nodeType));
+        float_op2 = castingTo(op1,"float")
+        final_result->type = "float";
+        switch(op){
+            case '+':
+                final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
+                break;
+            case '-':
+                final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
+                break;
+            case '*':
+                final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
+                break;
+            case '/':
+                final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
+                break;     
+        }
+    }
+    else if(strcmp(op1->type, "bool") == 0){
+        struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
+        bool_op2 = castingTo(op1,"bool")
+        final_result->type = "bool";
+        switch(op){ //TODO: check
+            case '+':
+                final_result->value.boolVal = op1->value.boolVal || float_op2->value.boolVal;
+                break;
+            case '-':
+                final_result->value.boolVal = op1->value.boolVal || float_op2->value.boolVal;
+                break;
+            case '*':
+                final_result->value.boolVal = op1->value.boolVal && float_op2->value.boolVal;
+                break;
+            case '/':
+                final_result->value.boolVal = op1->value.boolVal && float_op2->value.boolVal;
+                break;     
+        }
+    }
+    else if(strcmp(op1->type, "string") == 0){
+        struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
+        string_op2 = castingTo(op1,"string")
+        final_result->type = "string";
+        switch(op){ //TODO: check
+            case '+':
+                char* str1 = op1->value.stringVal;
+                strcat(str1, string_op2->value.stringVal);
+                final_result->value.stringVal = str1;
+                break;
+            case '-':
+            break;
+            case '*':
+            break;
+            case '/':
+            break;     
+        }
+    }
+    else{
+        ////Log_SEMANTIC_ERROR(TYPE_MISMATCH)
+    }
+    return final_result;
 }
 
 // Comparison
 struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
-    printf("Comparing %d %s %d\n", op1->value.intVal, op, op2->value.intVal);
-    struct nodeType* p = malloc(sizeof(struct nodeType));
-    p->type = "bool";
+    struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
+    bool_op1 = castingTo(op1,"bool")
+    struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
+    bool_op2 = castingTo(op2,"bool")    
+    
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    final_result->type = "bool";
+ 
     if(strcmp(op, "==") == 0){
-        p->value.boolVal = op1->value.intVal == op2->value.intVal;
+        final_result->value.boolVal = op1->value.boolVal == op2->value.boolVal;
     }
-    return p;
+    else if(strcmp(op, "!=") == 0){
+        final_result->value.boolVal = op1->value.boolVal != op2->value.boolVal;
+    }
+    else if(strcmp(op, "<") == 0){
+        final_result->value.boolVal = op1->value.boolVal < op2->value.boolVal;
+    }
+    else if(strcmp(op, ">") == 0){
+        final_result->value.boolVal = op1->value.boolVal > op2->value.boolVal;
+    }
+    else if(strcmp(op, "<=") == 0){
+        final_result->value.boolVal = op1->value.boolVal <= op2->value.boolVal;
+    }
+    else if(strcmp(op, ">=") == 0){
+        final_result->value.boolVal = op1->value.boolVal >= op2->value.boolVal;
+    }
+    else{
+        #Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
+    }
+    return final_result;
+}
+
+// Logical
+struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op){
+    struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
+    bool_op1 = castingTo(op1,"bool")
+    struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
+    if (op2 != NULL){
+        bool_op2 = castingTo(op2,"bool")    
+    }
+    
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    final_result->type = "bool";
+    
+    if(strcmp(op, "!") == 0){
+        final_result->value.boolVal = !op1->value.boolVal;
+    }
+    else if(strcmp(op, "&") == 0){
+        final_result->value.boolVal = op1->value.boolVal && op2->value.boolVal;
+    }
+    else if(strcmp(op, "|") == 0){
+        final_result->value.boolVal = op1->value.boolVal || op2->value.boolVal;
+    }
+    else{
+        #Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
+    }
+}
+
+// Unary
+struct nodeType* Negation(struct nodeType* term){
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    final_result->type = term->type;
+    final_result->isConst = term->isConst;
+    if(strcmp(term->type, "int") == 0){
+        final_result->value.intVal = -term->value.intVal;
+    }
+    else if(strcmp(term->type, "float") == 0){
+        final_result->value.floatVal = -term->value.floatVal;
+    }
+    return final_result;
 }
 
 int computeIdentifierIndex(char* name){
@@ -546,19 +694,19 @@ struct nodeType* identifierValue(char* name){
         return NULL;
     }
     
-    struct nodeType* p = malloc(sizeof(struct nodeType));;
-    p->type = symbol_Table[identifier_sym_table_index].type;
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));;
+    final_result->type = symbol_Table[identifier_sym_table_index].type;
 
     if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
-        p->value.intVal = symbol_Table[identifier_sym_table_index].value.intVal;
+        final_result->value.intVal = symbol_Table[identifier_sym_table_index].value.intVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0)
-        p->value.floatVal = symbol_Table[identifier_sym_table_index].value.floatVal;
+        final_result->value.floatVal = symbol_Table[identifier_sym_table_index].value.floatVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0)
-        p->value.boolVal = symbol_Table[identifier_sym_table_index].value.boolVal;
+        final_result->value.boolVal = symbol_Table[identifier_sym_table_index].value.boolVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
-        p->value.stringVal = symbol_Table[identifier_sym_table_index].value.stringVal;
+        final_result->value.stringVal = symbol_Table[identifier_sym_table_index].value.stringVal;
 
-    return p;
+    return final_result;
 }  
 
 // This function call after check that Identifier(name) is same type as node type 

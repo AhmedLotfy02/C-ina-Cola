@@ -131,10 +131,10 @@
     struct nodeType* identifierValue(char* name) //TODO: & create nodeType* p.value-> & p.type-> 
     void setInit(char* name); //TODO:
     void setUsed(char* name); //TODO:
+    char* valueString(struct nodeType* node);
     void printNode(struct nodeType* node); //TODO:
     void returnNode(struct nodeType* node); //TODO:    
-    void checkInitialized(char* name); //TODO:
-    void checkUsed(char* name); //TODO:
+    void checkInitialized(char* name); 
     void checkSameScope(char* name);
     void checkOutOfScope(char* name);
     void checkConst(char* name);
@@ -192,7 +192,7 @@
 //------------------------
 // Return Types
 %type <TYPE_VOID> program codeBlock controlStatement statement statements
-%type <TYPE_NODE> term expr assignment
+%type <TYPE_NODE> term expr assignment printList
 
 
 //------------------------
@@ -316,9 +316,9 @@ forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';'
 /*---------------------------------------*/
 
 /* ------------Statement----------------- */
-// printList:  expr
-//             | printList ',' expr {/*TODO:*/}
-//             ;
+printList:  expr
+            | printList ',' expr {$$ = $1;} {char* str1 = $$->value.stringVal; char* str2 = valueString($3);  strcat(str1, str2); $$->value.stringVal =  str1} // Concatenate str2 to str1 (result is stored in str1)
+            ;
 statement: assignment {;}
             | expr {printf("aloo\n");}
             | decleration {;}
@@ -328,7 +328,7 @@ statement: assignment {;}
             | RETURN 		                    {return;} 
             | RETURN expr 		                {returnNode($2);} //TODO: $$ =(struct nodeType* )returnNode($2);node with return value & type >> How to handle X = func()
             | PRINT '(' expr ')' 		        {printNode($3);}
-            // | PRINT '(' printList ')' 		    {$$ = $3;} 
+            | PRINT '(' printList ')' 		    {$$ = $3;} 
             ;            
 /*---------------------------------------*/
 
@@ -420,6 +420,13 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     return p;
 }
 
+char* valueString(struct nodeType* node){
+    struct nodeType* str_p = malloc(sizeof(struct nodeType));
+    str_p = castingTo(node,"string")
+    return str_p->value.stringVal;
+}
+    
+
 // Insert the variable in the symbol table
 void insert(char* name, char* type, int isConst, int isInit, int isUsed, int scope){
 
@@ -445,7 +452,7 @@ void enterScope() {
 void cleanedUpScope(int scope_idx) {
     for(int i=0; i<sym_table_idx ;i++) {
         if(symbol_Table[i].scope == scopes[scope_idx-1]) {
-            // Gohst Varible
+            // Ghost Varible
             symbol_Table[i].scope = -1;     // -1: means was in scope but cleaned ,but, 0: means no scope     
         }
     }
@@ -491,7 +498,6 @@ void checkOutOfScope(char* name) {
 void checkInitialized(char* name) {
     int lvl;
     for(int i=sym_table_idx-1;i>=0;i--) {
-        //TODO: check Ghoast variable
         if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)

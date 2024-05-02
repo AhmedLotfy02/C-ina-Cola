@@ -121,14 +121,14 @@
     struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op); //TODO: Continue Implement of arithmatic() 
     struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op); //TODO: Continue Implement of logical()
     struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op); //TODO: Continue Implement of doComparison()
-    struct nodeType* castingTo(struct nodeType* term, char *type); //TODO: Implement castingTo($4, $2->type) $$->isConst = $4->isConst;
+    struct nodeType* castingTo(struct nodeType* term, char *type);
     struct nodeType* Negation(struct nodeType* term);     //TODO: Implement Negation($2) $$->isConst=$2->isConst;
     struct nodeType* createIntNode(int value);
     struct nodeType* createNode(char* type);
     void identifierNodeTypeCheck(char* name , struct nodeType* node);//TODO: 
     void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2);//TODO: 
-    void updateIdentifierValue(char* name, struct nodeType* node);//TODO: 
-    struct nodeType* identifierValue(char* name) //TODO: & create nodeType* p.value-> & p.type-> 
+    void updateIdentifierValue(char* name, struct nodeType* node);
+    struct nodeType* identifierValue(char* name)
     void setInit(char* name); //TODO:
     void setUsed(char* name); //TODO:
     char* valueString(struct nodeType* node);
@@ -502,6 +502,61 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
         }
     } 
     return casted_ptr;    
+}
+
+int computeIdentifierIndex(char* name){
+    int lvl;
+    for(int i=sym_table_idx-1; i>=0 ;i--) {
+        if(symbol_Table[i].name == name) {
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) {
+                if(lvl == scopes[j]) {
+                    return i;
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+struct nodeType* identifierValue(char* name){
+    int identifier_sym_table_index = computeIdentifierIndex(name);
+    if (identifier_sym_table_index < 0){
+        //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
+        return NULL;
+    }
+    
+    struct nodeType* p = malloc(sizeof(struct nodeType));;
+    p->type = symbol_Table[identifier_sym_table_index].type;
+
+    if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
+        p->value.intVal = symbol_Table[identifier_sym_table_index].value.intVal;
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0)
+        p->value.floatVal = symbol_Table[identifier_sym_table_index].value.floatVal;
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0)
+        p->value.boolVal = symbol_Table[identifier_sym_table_index].value.boolVal;
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
+        p->value.stringVal = symbol_Table[identifier_sym_table_index].value.stringVal;
+
+    return p;
+}  
+
+// This function call after check that Identifier(name) is same type as node type 
+void updateIdentifierValue(char* name, struct nodeType* node);{
+    int identifier_sym_table_index = computeIdentifierIndex(name);
+    if (identifier_sym_table_index < 0){
+        //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
+        return NULL;
+    }
+    
+    if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
+        symbol_Table [identifier_sym_table_index].value.intVal = node->value.intVal;
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0)
+        symbol_Table[identifier_sym_table_index].value.floatVal = node->value.floatVal;
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0)
+        symbol_Table[identifier_sym_table_index].value.boolVal = node->value.boolVal;
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
+        symbol_Table[identifier_sym_table_index].value.stringVal = node->value.stringVal;
 }
 
 char* valueString(struct nodeType* node){

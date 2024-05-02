@@ -101,7 +101,7 @@
         }value;
         int isDecl, isConst, isInit, isUsed, scope;
     };
-    struct symbol symbol_Table [100]; // 26 for lower case, 26 for upper case
+    struct symbol symbol_Table [100]; //Max number of symbols(Varibles) = 100 
     int sym_table_idx = 0;
     void insert(char* name, char* type, int isConst, int isInit, int isUsed, int scope);
     ///////////////////////////////////////////////
@@ -109,6 +109,10 @@
     int scope_idx = 1;
     int scope_lvl = 1;
     int scopes[100];
+    //intialize the scopes table 
+    for (int i = 0; i < 100; i++) {
+        scopes[i] = 0; //default scope = 0 (No scope)
+    }
     void enterScope();
     void exitScope();
     ///////////////////////////////////////////////
@@ -437,8 +441,18 @@ void enterScope() {
     scope_idx++;
     scope_lvl++;
 }
+//Deallocating the memory for those local variables declared within a scope 
+void cleanedUpScope(int scope_idx) {
+    for(int i=0; i<sym_table_idx ;i++) {
+        if(symbol_Table[i].scope == scopes[scope_idx-1]) {
+            // Gohst Varible
+            symbol_Table[i].scope = -1;     // -1: means was in scope but cleaned ,but, 0: means no scope     
+        }
+    }
+}
 // Exit the scope
 void exitScope() {
+    cleanedUpScope(scope_idx)
     scope_idx--;
 }
 // Check if the variable is declared in the same scope
@@ -470,6 +484,27 @@ void checkOutOfScope(char* name) {
     }
     printf("Error: variable %s is out of scope\n", name);
 
+}
+
+
+// this function checks if a variable is used before initialized
+void checkInitialized(char* name) {
+    int lvl;
+    for(int i=sym_table_idx-1;i>=0;i--) {
+        //TODO: check Ghoast variable
+        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
+                    if(symbol_Table[i].isInit == 1) {
+                        //Every thing is OK
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    printf("Error: variable %s is used before initialized\n", name);
 }
 
 // Check if the node is constant or not

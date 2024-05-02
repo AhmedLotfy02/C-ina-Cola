@@ -125,12 +125,12 @@
     struct nodeType* Negation(struct nodeType* term);     //TODO: Implement Negation($2) $$->isConst=$2->isConst;
     struct nodeType* createIntNode(int value);
     struct nodeType* createNode(char* type);
-    void identifierNodeTypeCheck(char* name , struct nodeType* node);//TODO: 
-    void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2);//TODO: 
+    void identifierNodeTypeCheck(char* name , struct nodeType* node); 
+    void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2); 
     void updateIdentifierValue(char* name, struct nodeType* node);
     struct nodeType* identifierValue(char* name)
-    void setInit(char* name); //TODO:
-    void setUsed(char* name); //TODO:
+    void setInit(char* name); 
+    void setUsed(char* name); 
     char* valueString(struct nodeType* node);
     void printNode(struct nodeType* node); 
     struct nodeType*  returnNode(struct nodeType* node); //TODO: $$ =(struct nodeType* )returnNode($2);node with return value & type >> How to handle X = func() 
@@ -420,6 +420,40 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     return p;
 }
 
+int computeIdentifierIndex(char* name){
+    int lvl;
+    for(int i=sym_table_idx-1; i>=0 ;i--) {
+        if(symbol_Table[i].name == name) {
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) {
+                if(lvl == scopes[j]) {
+                    return i;
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+void identifierNodeTypeCheck(char* name , struct nodeType* node){
+    int identifier_sym_table_index = computeIdentifierIndex(name);
+    if (identifier_sym_table_index < 0){
+        //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
+        return NULL;
+    }
+    
+    if(strcmp(symbol_Table[identifier_sym_table_index].type, type2->type) != 0) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, symbol_Table[identifier_sym_table_index].name);
+    }
+}
+
+void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
+    if(strcmp(node1->type, node2->type) != 0) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, type2->type); 
+    }
+    return;
+}
+
 struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement //Log_SEMANTIC_ERROR(TYPE_MISMATCH)
     struct nodeType* casted_ptr = malloc(sizeof(struct nodeType));
     casted_ptr->isConst = term->isConst;
@@ -504,20 +538,6 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
     return casted_ptr;    
 }
 
-int computeIdentifierIndex(char* name){
-    int lvl;
-    for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(symbol_Table[i].name == name) {
-            lvl = symbol_Table[i].scope;
-            for(int j=scope_idx-1;j>=0;j--) {
-                if(lvl == scopes[j]) {
-                    return i;
-                }
-            }
-        }
-    }
-    return -1;
-}
 
 struct nodeType* identifierValue(char* name){
     int identifier_sym_table_index = computeIdentifierIndex(name);
@@ -612,7 +632,7 @@ void exitScope() {
 void checkSameScope(char* name) {
     int lvl;
     for(int i=0; i<sym_table_idx ;i++) {
-        if(symbol_Table[i].name == name) {
+        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             if(lvl == scopes[scope_idx-1]) {
                  printf("Error: variable %s already declared in the same scope\n", name); 
@@ -622,14 +642,14 @@ void checkSameScope(char* name) {
     }
 }
 
-// Check if the variable is declared in the same scope
+// Check if the variable is undeclared or removed out of scope
 void checkOutOfScope(char* name) {
     int lvl;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(symbol_Table[i].name == name) {
+        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
-            for(int j=scope_idx-1;j>=0;j--) {
-                if(lvl == scopes[j]) {
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
                     return;
                 }
             }
@@ -690,6 +710,42 @@ void printSymbolTable() {
     for(int i=0; i<sym_table_idx ;i++) {
         printf("SymbolTable() : %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [i].name, symbol_Table [i].isDecl, symbol_Table [i].isConst, i); 
     }
+}
+
+
+// ------------------------------------------------------------------------------- 
+// Setter functions 
+// -------------------------------------------------------------------------------  
+void setInit(char* name) {
+    int lvl;
+    for(int i=sym_table_idx-1;i>=0;i--) {
+        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
+                    symbol_Table[i].isInit = 1
+                    return;
+                    
+                }
+            }
+        }
+    }
+}
+
+void setUsed(char* name) {
+    int lvl;
+    for(int i=sym_table_idx-1;i>=0;i--) {
+        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
+                    symbol_Table[i].isUsed = 1;
+                    return;
+                    
+                }
+            }
+        }
+    }    
 }
 
 ////////////////  QUAD GENERATION //////////////////////

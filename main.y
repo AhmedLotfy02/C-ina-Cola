@@ -133,7 +133,7 @@
     void setUsed(char* name); //TODO:
     char* valueString(struct nodeType* node);
     void printNode(struct nodeType* node); //TODO:
-    void returnNode(struct nodeType* node); //TODO:    
+    struct nodeType*  returnNode(struct nodeType* node); //TODO: $$ =(struct nodeType* )returnNode($2);node with return value & type >> How to handle X = func() 
     void checkInitialized(char* name); 
     void checkSameScope(char* name);
     void checkOutOfScope(char* name);
@@ -326,7 +326,7 @@ statement: assignment {;}
             | BREAK 		                    {break;} //TODO: check this 
             | CONTINUE 		                    {continue;} 
             | RETURN 		                    {return;} 
-            | RETURN expr 		                {returnNode($2);} //TODO: $$ =(struct nodeType* )returnNode($2);node with return value & type >> How to handle X = func()
+            | RETURN expr 		                {returnNode($2);} 
             | PRINT '(' expr ')' 		        {printNode($3);}
             | PRINT '(' printList ')' 		    {$$ = $3;} 
             ;            
@@ -425,6 +425,13 @@ char* valueString(struct nodeType* node){
     str_p = castingTo(node,"string")
     return str_p->value.stringVal;
 }
+
+void printNode(struct nodeType* node){
+    struct nodeType* str_p = malloc(sizeof(struct nodeType));
+    str_p = castingTo(node,"string")
+    printf( str_p->value.stringVal);  
+}
+
     
 
 // Insert the variable in the symbol table

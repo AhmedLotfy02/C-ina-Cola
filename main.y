@@ -377,7 +377,7 @@ repeatUntil:
 
 /* ----------------Enumerations--------------- */
 enumDef:	           
-        ENUM IDENTIFIER '{' enumBody '}'        {checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} {enumCounter=0;}
+        ENUM IDENTIFIER {quadStartEnum($2); checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} '{' enumBody '}' {quadEndEnum($2); enumCounter=0;}
         ;
                         
 enumBody:

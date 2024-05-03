@@ -1,6 +1,6 @@
 %{
     /*////////////////////////////////
-    TODO: add   typedef  - semanticError 
+    TODO: add  typedef  - semanticError 
     ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
@@ -22,9 +22,10 @@
     #define CONSTANT 6
     #define OUT_OF_SCOPE 7
     #define CONSTANT_IF 8
+    int enumCounter = 0;
     
     void semanticError(int semanticErr,char* c){
-        int errLine=line;
+        int errLine = line;
         switch(semanticErr){
             case TYPE_MISMATCH:
                 printf("Semanic Error: Type mismatch at line %d\n",errLine);
@@ -69,11 +70,13 @@
     int endLabelStack[MAX_STACK_SIZE];
     
     // Quad Functions
+    #define SHOW_Quads 1
     void quadJumpFalseLabel(int labelNum);
     void quadJumpEndLabel();
     void quadPopLabel();
     void quadPushEndLabel(int endLabelNum);
     void quadPopEndLabel();
+    void quadPushInt(int val);
     
     ////////////////////////////////////////////////////////////////////////
     // nodeType as in section
@@ -109,10 +112,6 @@
     int scope_idx = 1;
     int scope_lvl = 1;
     int scopes[100];
-    //intialize the scopes table 
-    for (int i = 0; i < 100; i++) {
-        scopes[i] = 0; //default scope = 0 (No scope)
-    }
     void enterScope();
     void exitScope();
     ///////////////////////////////////////////////
@@ -121,8 +120,8 @@
     // used to fill enum values
     struct nodeType* enumValues;
     struct nodeType*  printStringValues;
-    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op); 
-    struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op); 
+    struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char* op); 
+    struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op); 
     struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op); 
     struct nodeType* castingTo(struct nodeType* term, char *type);
     struct nodeType* Negation(struct nodeType* term);     
@@ -131,7 +130,7 @@
     void identifierNodeTypeCheck(char* name , struct nodeType* node); 
     void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2); 
     void updateIdentifierValue(char* name, struct nodeType* node);
-    struct nodeType* identifierValue(char* name)
+    struct nodeType* identifierValue(char* name);
     void setInit(char* name); 
     void setUsed(char* name); 
     // char* valueString(struct nodeType* node);
@@ -219,8 +218,7 @@ program:
         | functionDefinition {;}
         | statements {printf("hi1");}
         | statements program {printf("hi2");}
-        | functionDefinition program {;}
-        
+        | functionDefinition program {;}        
         |  {;}
         ;
 
@@ -243,31 +241,37 @@ dataType: INT_DATA_TYPE     {printf("int data type \n");} { $$ = createIntNode(0
         | VOID_DATA_TYPE    {printf("void data type \n");} { ; }
         ;
 /* */
-decleration: dataType IDENTIFIER  {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");} {printSymbolTable();}
-           | dataType IDENTIFIER  '='  expr {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($2,$4); setInit($2); } {printf("inside decleration \n");} {printSymbolTable();} 
-           | dataModifier dataType IDENTIFIER  '='  expr {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($3,$5); setInit($3); } {printf("inside decleration \n");} {printSymbolTable();} {printSymbolTable();}            
+decleration: dataType IDENTIFIER                            {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printf("inside decleration \n");} {printSymbolTable();}
+           | dataType IDENTIFIER  '='  expr                 {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($2,$4); setInit($2); } {printf("inside decleration \n");} {printSymbolTable();} 
+           | dataModifier dataType IDENTIFIER  '='  expr    {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($3,$5); setInit($3); } {printf("inside decleration \n");} {printSymbolTable();} {printSymbolTable();}            
            ;
-assignment: IDENTIFIER '='  expr {printf("inside assignment \n");}     {checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); $$ = $3;} {printSymbolTable();}
-          ;
-        ;
+           
+/* Assignment */
+assignment: 
+            IDENTIFIER '='  expr                         /*TODO:{ $$ = $3;}*/{printf("inside assignment \n"); checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); } {printSymbolTable();}
+            | enumDef                               {;}            
+            | ENUM enumDeclaration              {/*Check declared*/;}
+            ;
+
+/* Expression */
 expr:
         term                      { $$ = $1; } 
         | '(' dataType ')' term   { $$ = castingTo($4, $2->type);}
         | '-' term                { $$ = Negation($2); }
-        | expr '+' expr           { $$ = arithmatic($1,$3,'+'); } 
-        | expr '-' expr           { $$ = arithmatic($1,$3,'-'); }
-        | expr '*' expr           { $$ = arithmatic($1,$3,'*'); }
-        | expr '/' expr           { $$ = arithmatic($1,$3,'/'); }
-        | expr '%' expr           { $$ = arithmatic($1,$3,'%'); }
+        | expr '+' expr           { $$ = arithmatic($1,$3,"+"); } 
+        | expr '-' expr           { $$ = arithmatic($1,$3,"-"); }
+        | expr '*' expr           { $$ = arithmatic($1,$3,"*"); }
+        | expr '/' expr           { $$ = arithmatic($1,$3,"/"); }
+        | expr '%' expr           { $$ = arithmatic($1,$3,"%"); }
         | expr EQ expr            { $$ = doComparison($1,$3,"==");} 
         | expr NEQ expr           { $$ = doComparison($1,$3,"!=");}
         | expr LT expr            { $$ = doComparison($1,$3,"<"); }
         | expr GT expr            { $$ = doComparison($1,$3,">"); }
         | expr GEQ expr           { $$ = doComparison($1,$3,">="); }
         | expr LEQ expr           { $$ = doComparison($1,$3,"<="); }
-        | expr AND expr           { $$ = logical($1,$3,'&'); } 
-        | expr OR expr            { $$ = logical($1,$3,'|'); }
-        | NOT expr                { $$ = logical($2,NULL,'!'); }
+        | expr AND expr           { $$ = logical($1,$3,"&"); } 
+        | expr OR expr            { $$ = logical($1,$3,"|"); }
+        | NOT expr                { $$ = logical($2,NULL,"!"); }
         | '(' expr ')'            { $$ = $2;}
         ;
 
@@ -287,7 +291,7 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
 
 /* ----------------Conditions--------------- */
-ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum)} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {printf("asdasd");} {exitScope();quadJumpEndLabel();quadPopLabel();} elseCondition {;}
+ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum);} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {printf("asdasd");} {exitScope();quadJumpEndLabel();quadPopLabel();} elseCondition {;}
              ;
 elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
@@ -309,7 +313,7 @@ case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");
 
 /* ----------------Loops--------------- */
 while: 
-        WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
+        WHILE '(' expr ')' {printf("Found a while loop!\n");} '{' codeBlock  '}' 
         ;
 forLoop: 
         FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
@@ -328,28 +332,28 @@ enumDef:
         ;
                         
 enumBody:
-        IDENTIFIER                              {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = 0; updateIdentifierValue($1,enumValues);}
-        | IDENTIFIER '=' exp                    {checkSameScope($1); nodeNodeTypeCheck(enumValues, $3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues)}
-        | enumBody ',' IDENTIFIER               {checkSameScope($3); insert($3, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal++; updateIdentifierValue($3, enumValues)}
-        | enumBody ',' IDENTIFIER '=' exp       {checkSameScope($3); nodeNodeTypeCheck(enumValues, $5); insert($3, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($5, "int")->value.intVal; updateIdentifierValue($3, enumValues)}
+        IDENTIFIER                              {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1,enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter);}
+        | IDENTIFIER '=' expr                    {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues);}
+        | IDENTIFIER ',' enumBody                {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1, enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter);}
+        | IDENTIFIER '=' expr ',' enumBody        {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues);}
         
 enumDeclaration: 
         IDENTIFIER IDENTIFIER                   {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 0, 0, scopes[scope_idx-1]);}
-        | IDENTIFIER IDENTIFIER '=' exp         {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int"))}
+        | IDENTIFIER IDENTIFIER '=' expr         {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int"));}
         ;
 
 
 /* ------------Statement----------------- */
 printList:  expr
-            | printList ',' expr                {char* str1 = castingTo($3, "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1} // Concatenate str2 to str1 (result is stored in str1)
+            | printList ',' expr                {char* str1 = castingTo($3, "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1;} // Concatenate str2 to str1 (result is stored in str1)
             ;
 statement: assignment {;}
             | expr {printf("aloo\n");}
             | decleration {;}
             | EXIT 		                        {exit(EXIT_SUCCESS);}
-            | BREAK 		                    {break;} //TODO: check this 
-            | CONTINUE 		                    {continue;} 
-            | RETURN 		                    {return;} 
+            | BREAK 		                    {;} //TODO: 
+            | CONTINUE 		                    {;} 
+            | RETURN 		                    {;} 
             | RETURN expr 		                {$$ = $2;} 
             | PRINT '(' expr ')' 		        {printNode($3);}
             | PRINT '(' printList ')' 		    {$$ = $3;} 
@@ -409,7 +413,7 @@ struct nodeType* createStringNode(char* value) {
 struct nodeType* createNode(char* type) {
     struct nodeType* p = malloc(sizeof(struct nodeType));
     p->type = type;
-    node->isConst = 1;
+    p->isConst = 1;
     p->value.intVal = 0;
     return p;
 }
@@ -468,10 +472,10 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
             // remove double quotes from start and end of string
             char *str = strdup(term->value.stringVal);
             if (strcmp("", str) == 0) {//Only EMPTY string
-                casted_ptr->value.boolVal = true;
+                casted_ptr->value.boolVal = 1;
             }
             else{
-                casted_ptr->value.boolVal = false;
+                casted_ptr->value.boolVal = 0;
             }
         }
         else{
@@ -504,108 +508,109 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
 
 
 // Arithmatic
-struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
+struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op){
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
     
     if(strcmp(op1->type, "int") == 0){
         if(op2->type == "float"){
             struct nodeType* float_op1 = malloc(sizeof(struct nodeType));
-            float_op1 = castingTo(op1,"float")
+            float_op1 = castingTo(op1,"float");
             final_result->type = "float";
-            switch(op){
-                case '+':
-                    final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
-                    break;
-                case '-':
-                    final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
-                    break;
-                case '*':
-                    final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
-                    break;
-                case '/':
-                    final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
-                    break;   
-            }   
+            
+            if(strcmp(op, "+") == 0){
+                final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
+                }
+            else if(strcmp(op, "-") == 0){
+                final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
+                }
+            else if(strcmp(op, "*") == 0){
+                final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
+                }
+            else if(strcmp(op, "/") == 0){
+                final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
+                }   
+               
         }
         else{
             struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
-            int_op2 = castingTo(op2,"int")
+            int_op2 = castingTo(op2,"int");
             final_result->type = "int";
-            switch(op){
-                case '+':
-                    final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
-                    break;
-                case '-':
-                    final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
-                    break;
-                case '*':
-                    final_result->value.intVal = op1->value.intVal * int_op2->value.intVal;
-                    break;
-                case '/':
-                    final_result->value.intVal = op1->value.intVal / int_op2->value.intVal;
-                    break;  
-                case '%':
-                    final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
-                break; 
+            
+            if(strcmp(op, "+") == 0){
+                final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
+                }
+            else if(strcmp(op, "-") == 0){
+                final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
+                }
+            else if(strcmp(op, "*") == 0){
+                final_result->value.intVal = op1->value.intVal * int_op2->value.intVal;
+                }
+            else if(strcmp(op, "/") == 0){
+                final_result->value.intVal = op1->value.intVal / int_op2->value.intVal;
+                }  
+            else if(strcmp(op, "%") == 0){
+                final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
             } 
+             
         }
     }
     else if(strcmp(op1->type, "float") == 0){
         struct nodeType* float_op2 = malloc(sizeof(struct nodeType));
-        float_op2 = castingTo(op1,"float")
+        float_op2 = castingTo(op1,"float");
         final_result->type = "float";
-        switch(op){
-            case '+':
-                final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
-                break;
-            case '-':
-                final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
-                break;
-            case '*':
-                final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
-                break;
-            case '/':
-                final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
-                break;     
-        }
+        
+        if(strcmp(op, "+") == 0){
+            final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
+            }
+        else if(strcmp(op, "-") == 0){
+            final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
+            }
+        else if(strcmp(op, "*") == 0){
+            final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
+            }
+        else if(strcmp(op, "/") == 0){
+            final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
+            }     
+    
     }
     else if(strcmp(op1->type, "bool") == 0){
         struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
-        bool_op2 = castingTo(op1,"bool")
+        bool_op2 = castingTo(op1,"bool");
         final_result->type = "bool";
-        switch(op){ //TODO: check
-            case '+':
-                final_result->value.boolVal = op1->value.boolVal || float_op2->value.boolVal;
-                break;
-            case '-':
-                final_result->value.boolVal = op1->value.boolVal || float_op2->value.boolVal;
-                break;
-            case '*':
-                final_result->value.boolVal = op1->value.boolVal && float_op2->value.boolVal;
-                break;
-            case '/':
-                final_result->value.boolVal = op1->value.boolVal && float_op2->value.boolVal;
-                break;     
-        }
+         //TODO: check
+        if(strcmp(op, "+") == 0){
+            final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
+            }
+        else if(strcmp(op, "-") == 0){
+            final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
+            }
+        else if(strcmp(op, "*") == 0){
+            final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
+            }
+        else if(strcmp(op, "/") == 0){
+            final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
+            }     
+    
     }
     else if(strcmp(op1->type, "string") == 0){
         struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
-        string_op2 = castingTo(op1,"string")
+        string_op2 = castingTo(op1,"string");
         final_result->type = "string";
-        switch(op){ //TODO: check
-            case '+':
-                char* str1 = op1->value.stringVal;
-                strcat(str1, string_op2->value.stringVal);
-                final_result->value.stringVal = str1;
-                break;
-            case '-':
-            break;
-            case '*':
-            break;
-            case '/':
-            break;     
+         //TODO: check
+        if(strcmp(op, "+") == 0){{
+            char* str1 = op1->value.stringVal;
+            strcat(str1, string_op2->value.stringVal);
+            final_result->value.stringVal = str1;
+            }
         }
+        else if(strcmp(op, "-") == 0){
+        }
+        else if(strcmp(op, "*") == 0){
+        }
+        else if(strcmp(op, "/") == 0){
+        }     
+    
     }
     else{
         ////Log_SEMANTIC_ERROR(TYPE_MISMATCH)
@@ -616,9 +621,9 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
 // Comparison
 struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
     struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
-    bool_op1 = castingTo(op1,"bool")
+    bool_op1 = castingTo(op1,"bool");
     struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
-    bool_op2 = castingTo(op2,"bool")    
+    bool_op2 = castingTo(op2,"bool");    
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
@@ -643,18 +648,18 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
         final_result->value.boolVal = op1->value.boolVal >= op2->value.boolVal;
     }
     else{
-        #Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
+        //Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
     }
     return final_result;
 }
 
 // Logical
-struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op){
+struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op){
     struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
-    bool_op1 = castingTo(op1,"bool")
+    bool_op1 = castingTo(op1,"bool");
     struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
     if (op2 != NULL){
-        bool_op2 = castingTo(op2,"bool")    
+        bool_op2 = castingTo(op2,"bool");  
     }
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
@@ -671,7 +676,7 @@ struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op){
         final_result->value.boolVal = op1->value.boolVal || op2->value.boolVal;
     }
     else{
-        #Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
+        //Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
     }
 }
 
@@ -708,17 +713,17 @@ void identifierNodeTypeCheck(char* name , struct nodeType* node){
     int identifier_sym_table_index = computeIdentifierIndex(name);
     if (identifier_sym_table_index < 0){
         //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
-        return NULL;
+        return ;
     }
     
-    if(strcmp(symbol_Table[identifier_sym_table_index].type, type2->type) != 0) {
+    if(strcmp(symbol_Table[identifier_sym_table_index].type, node->type) != 0) {
         //Log_SEMANTIC_ERROR(TYPE_MISMATCH, symbol_Table[identifier_sym_table_index].name);
     }
 }
 
 void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
     if(strcmp(node1->type, node2->type) != 0) {
-        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, type2->type); 
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, node->type); 
     }
     return;
 }
@@ -748,11 +753,11 @@ struct nodeType* identifierValue(char* name){
 }  
 
 // This function call after check that Identifier(name) is same type as node type 
-void updateIdentifierValue(char* name, struct nodeType* node);{
+void updateIdentifierValue(char* name, struct nodeType* node){
     int identifier_sym_table_index = computeIdentifierIndex(name);
     if (identifier_sym_table_index < 0){
         //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
-        return NULL;
+        return;
     }
     
     if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
@@ -773,7 +778,7 @@ void updateIdentifierValue(char* name, struct nodeType* node);{
 
 void printNode(struct nodeType* node){
     struct nodeType* str_p = malloc(sizeof(struct nodeType));
-    str_p = castingTo(node,"string")
+    str_p = castingTo(node,"string");
     printf( str_p->value.stringVal);  
 }
 
@@ -811,7 +816,7 @@ void cleanedUpScope(int scope_idx) {
 }
 // Exit the scope
 void exitScope() {
-    cleanedUpScope(scope_idx)
+    cleanedUpScope(scope_idx);
     scope_idx--;
 }
 // Check if the variable is declared in the same scope
@@ -886,7 +891,7 @@ void checkConst(char* name) {
 //check if the if conditions is constant or not
 void checkConstIF(struct nodeType* node){
     if(node->isConst==1){
-        semanticError(CONSTANT_IF, node->value.boolVal !=0);
+        semanticError(CONSTANT_IF, node->type/*node->value.boolVal !=0*/); //TODO: check warning about expected 'char *' but argument is of type 'int'
     }
 
 }
@@ -909,9 +914,8 @@ void setInit(char* name) {
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
-                    symbol_Table[i].isInit = 1
+                    symbol_Table[i].isInit = 1;
                     return;
-                    
                 }
             }
         }
@@ -979,9 +983,20 @@ void quadPopEndLabel(){
     printf("Quads(%d) EndLabel_%d:\n", line, endLabelNum);
       
 }
+void quadPushInt(int val)
+{
+       if (SHOW_Quads) {
+               printf("Quads(%d) \tPUSH %d\n", line, val);
+       }
+}
+
 int main(void) {
     //enumValues = createIntNode(0); //TODO: test this
     //printStringValues = createStringNode("");
+        //intialize the scopes table 
+    for (int i = 0; i < 100; i++) {
+        scopes[i] = 0; //default scope = 0 (No scope)
+    }
     yyparse();
     return 0;
 }

@@ -2,9 +2,10 @@
 
     #include "main.tab.h"
     #include <stdio.h>
+    #include <string.h>
     void yyerror(char *); //called by the parser whenever it encounters a syntax error.
     int yylex(); // called by the parser whenever it needs a token.
-    extern int line =1;
+    extern int line =1; //TODO: solve warning: 'line' initialized and declared 'extern' ==> Ans.(extern int line;)
 %}
 
 /*--Some Definitions--*/
@@ -72,9 +73,9 @@ arithmeticOps   [/+*%-]
 "exit"				    {return EXIT;} 
 "return"                {return RETURN;}
 
-[a-zA-Z_][a-zA-Z0-9_]*  {yylval.TYPE_STR = strdup(yytext); return IDENTIFIER;}
 "true"                  {return  yylval.TYPE_BOOL=1; return TRUE_VAL;}
 "false"                 {return  yylval.TYPE_BOOL=0; return FALSE_VAL;}
+[a-zA-Z_][a-zA-Z0-9_]*  {yylval.TYPE_STR = strdup(yytext); return IDENTIFIER;}
 
 .                       yyerror("Unknown character");/*Unexpected Token*/
 %%

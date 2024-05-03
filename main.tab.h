@@ -43,27 +43,39 @@
      AND = 259,
      NEQ = 260,
      EQ = 261,
-     NOT = 262,
-     INTEGER = 263,
-     FLOAT_NUMBER = 264,
-     IDENTIFIER = 265,
-     CONST = 266,
-     RETURN = 267,
-     IF = 268,
-     ELSE = 269,
-     SWITCH = 270,
-     CASE = 271,
-     DEFAULT = 272,
-     TRUE_VAL = 273,
-     FALSE_VAL = 274,
-     WHILE = 275,
-     FOR = 276,
-     BREAK = 277,
-     INT_DATA_TYPE = 278,
-     FLOAT_DATA_TYPE = 279,
-     STRING_DATA_TYPE = 280,
-     BOOL_DATA_TYPE = 281,
-     VOID_DATA_TYPE = 282
+     LEQ = 262,
+     LT = 263,
+     GEQ = 264,
+     GT = 265,
+     NOT = 266,
+     INTEGER = 267,
+     FLOAT_NUMBER = 268,
+     STRING = 269,
+     TRUE_VAL = 270,
+     FALSE_VAL = 271,
+     RETURN = 272,
+     ENUM = 273,
+     PRINT = 274,
+     ASSERT = 275,
+     EXIT = 276,
+     IF = 277,
+     ELSE = 278,
+     SWITCH = 279,
+     CASE = 280,
+     DEFAULT = 281,
+     WHILE = 282,
+     FOR = 283,
+     BREAK = 284,
+     CONTINUE = 285,
+     REPEAT = 286,
+     UNTIL = 287,
+     CONST = 288,
+     INT_DATA_TYPE = 289,
+     FLOAT_DATA_TYPE = 290,
+     STRING_DATA_TYPE = 291,
+     BOOL_DATA_TYPE = 292,
+     VOID_DATA_TYPE = 293,
+     IDENTIFIER = 294
    };
 #endif
 
@@ -74,20 +86,21 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 119 "main.y"
+#line 149 "main.y"
 
         int TYPE_INT; 
+        int TYPE_BOOL;
+        float TYPE_FLOAT;
+        char* TYPE_STR;
         void* TYPE_VOID;
         char* TYPE_DATA_TYPE;
         struct nodeType* TYPE_NODE;
         char* TYPE_DATA_MODIFIER;
-        int TYPE_BOOL;
-        float TYPE_FLOAT;
 ;
 
 
 /* Line 1676 of yacc.c  */
-#line 91 "main.tab.h"
+#line 104 "main.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

@@ -186,6 +186,9 @@
     void checkOutOfScope(char* name);
     void checkConst(char* name);
     void checkConstIF(struct nodeType* node);
+
+    void updateSymbolParam(char symbol, int param);
+
 %}
 /* Yacc definitions */
 
@@ -422,15 +425,23 @@ codeBlock:  statements {printf("inside code block \n");}
 /*---------------------------------------*/
 
 /* ------------Functions----------------- */ //TODO: How to handle X = func() 
-functionArgs: dataType IDENTIFIER   {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
-            | dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ','  functionArgs
-            ;   
-functionDefinition: dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope();} {printf("here \n");} functionDefinitionAfter '{' codeBlock '}' {exitScope();}
+functionArgs            : dataType IDENTIFIER                   {quadPopIdentifier($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
+                        | dataType IDENTIFIER  {quadPopIdentifier($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ',' functionArgs
+                        ;  
+functionParams          : term   {typeCheck3($1->type, symbol_Table[++funcPointer].type); paramCount--;}
+                        | term   {typeCheck3($1->type, symbol_Table[++funcPointer].type); paramCount--;} ',' functionParams
+                        ;
+functionDefinition: dataType IDENTIFIER {quadStartFunction($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope();}
+                     {printf("here \n");} functionDefinitionAfter '{' codeBlock '}'  {exitScope(); quadEndFunction($2); updateSymbolParam($2, argCount);}
                   ;
 functionDefinitionAfter: '(' functionArgs ')' {printf("definitions with params  \n");}
                         | '(' ')' {printf("definitions without params  \n");}
                         ;
-
+functionCall            : IDENTIFIER { paramCount = symbolVal($1)->value.intVal; funcPointer = getSymbolIndex($1); } functionCallRest {checkOutOfScope($1); $$ = symbolVal($1); quadCallFunction($1); if(paramCount != 0){Log_SEMANTIC_ERROR(UNDECLARED, $1);}}
+                        ;
+functionCallRest        : '(' functionParams ')'             {;}
+                        | '('              ')'               {;}
+                        ;
 %%
 
 void yyerror(char *s) {
@@ -774,6 +785,10 @@ void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
     return;
 }
 
+void updateSymbolParam(char symbol, int param){
+    int bucket = computeSymbolIndex(symbol);
+    symbol_Table [bucket].value.intVal = param;
+}
 
 struct nodeType* identifierValue(char* name){
     int identifier_sym_table_index = computeIdentifierIndex(name);

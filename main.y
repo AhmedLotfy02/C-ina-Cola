@@ -327,10 +327,10 @@ expr:
 term: 
         INTEGER                   {quadPushInt($1); printf("integer");}  { $$ = createIntNode($1);    $$->value.intVal = $1;}
         | FLOAT_NUMBER            {quadPushFloat($1); printf("float");}    { $$ = createNode("float");  $$->value.floatVal = $1;}
-        | STRING                  {printf("string\n");} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
+        | STRING                  {quadPushString($1); printf("string\n");} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
         | TRUE_VAL                {quadPushInt(1); printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
-        | FALSE_VAL               {quadPushInt(); printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
-        | IDENTIFIER              {printf("hello identifier  \n");} {checkOutOfScope($1); checkInitialized($1); $$ = identifierValue($1); setUsed($1);}   
+        | FALSE_VAL               {quadPushInt(0); printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
+        | IDENTIFIER              {quadPushIdentifier($1); printf("hello identifier  \n");} {checkOutOfScope($1); checkInitialized($1); $$ = identifierValue($1); setUsed($1);}   
         | '(' term ')'            { $$ = $2; }
         ;
 
@@ -402,8 +402,8 @@ statement: assignment {;}
             | EXIT 		                        {exit(EXIT_SUCCESS);}
             | BREAK 		                    {;} //TODO: 
             | CONTINUE 		                    {;} 
-            | RETURN 		                    {;} 
-            | RETURN expr 		                {$$ = $2;} 
+            | RETURN 		                    {quadReturn();} 
+            | RETURN expr 		                {quadReturn(); $$ = $2;} 
             | PRINT '(' expr ')' 		        {printNode($3);}
             | PRINT '(' printList ')' 		    {$$ = $3;} 
             ;            

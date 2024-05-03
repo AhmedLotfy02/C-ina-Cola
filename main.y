@@ -347,7 +347,7 @@ elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE '{' {enterScope();} codeBlock '}' {exitScope();} {printf("else {} detected \n");} 
              ;
 
-switchCase: SWITCH '(' IDENTIFIER ')' {printf("switch case passed  \n");} '{' {enterScope();} caseList '}' {exitScope();}
+switchCase: SWITCH '(' IDENTIFIER ')' {printf("switch case passed  \n");} {quadPushLastIdentifierStack($3);setInit($3);} '{' {enterScope();} caseList '}' {exitScope();} {quadPopLastIdentifierStack();}
           ;
 caseList : caseList case 
          | case 

@@ -305,22 +305,22 @@ assignment:
 /* Expression */
 expr:
         term                      { $$ = $1; } 
-        | '(' dataType ')' term   { $$ = castingTo($4, $2->type);}
-        | '-' term                { $$ = Negation($2); }
-        | expr '+' expr           { $$ = arithmatic($1,$3,"+"); } 
-        | expr '-' expr           { $$ = arithmatic($1,$3,"-"); }
-        | expr '*' expr           { $$ = arithmatic($1,$3,"*"); }
-        | expr '/' expr           { $$ = arithmatic($1,$3,"/"); }
-        | expr '%' expr           { $$ = arithmatic($1,$3,"%"); }
-        | expr EQ expr            { $$ = doComparison($1,$3,"==");} 
-        | expr NEQ expr           { $$ = doComparison($1,$3,"!=");}
-        | expr LT expr            { $$ = doComparison($1,$3,"<"); }
-        | expr GT expr            { $$ = doComparison($1,$3,">"); }
-        | expr GEQ expr           { $$ = doComparison($1,$3,">="); }
-        | expr LEQ expr           { $$ = doComparison($1,$3,"<="); }
-        | expr AND expr           { $$ = logical($1,$3,"&"); } 
-        | expr OR expr            { $$ = logical($1,$3,"|"); }
-        | NOT expr                { $$ = logical($2,NULL,"!"); }
+        | '(' dataType ')' term   {quadInstruction("CAST"); $$ = castingTo($4, $2->type);}
+        | '-' term                {quadInstruction("NEG"); $$ = Negation($2); }
+        | expr '+' expr           {quadInstruction("ADD"); $$ = arithmatic($1,$3,"+"); } 
+        | expr '-' expr           {quadInstruction("SUB"); $$ = arithmatic($1,$3,"-"); }
+        | expr '*' expr           {quadInstruction("MUL"); $$ = arithmatic($1,$3,"*"); }
+        | expr '/' expr           {quadInstruction("DIV"); $$ = arithmatic($1,$3,"/"); }
+        | expr '%' expr           {quadInstruction("MOD"); $$ = arithmatic($1,$3,"%"); }
+        | expr EQ expr            {quadInstruction("EQ");  $$ = doComparison($1,$3,"==");} 
+        | expr NEQ expr           {quadInstruction("NEQ");  $$ = doComparison($1,$3,"!=");}
+        | expr LT expr            {quadInstruction("LT");  $$ = doComparison($1,$3,"<"); }
+        | expr GT expr            {quadInstruction("GT");  $$ = doComparison($1,$3,">"); }
+        | expr GEQ expr           {quadInstruction("GEQ");  $$ = doComparison($1,$3,">="); }
+        | expr LEQ expr           {quadInstruction("LEQ");  $$ = doComparison($1,$3,"<="); }
+        | expr AND expr           {quadInstruction("LOGICAL_AND"); $$ = logical($1,$3,"&"); } 
+        | expr OR expr            {quadInstruction("LOGICAL_OR"); $$ = logical($1,$3,"|"); }
+        | NOT expr                {quadInstruction("NOT"); $$ = logical($2,NULL,"!"); }
         | '(' expr ')'            { $$ = $2;}
         ;
 

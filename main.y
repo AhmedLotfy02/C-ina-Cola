@@ -294,7 +294,7 @@ decleration: dataType IDENTIFIER                            {checkSameScope($2);
            
 /* Assignment */
 assignment: 
-            IDENTIFIER '='  expr                         /*TODO:{ $$ = $3;}*/{printf("inside assignment \n"); checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); } {printSymbolTable();}
+            IDENTIFIER '='  expr                         {printf("inside assignment \n"); checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); } {printSymbolTable();}{printf(castingTo($3,"string")->value.stringVal); $$ = $3;}
             | enumDef                               {;}            
             | ENUM enumDeclaration              {/*Check declared*/;}
             ;

@@ -1,6 +1,6 @@
 %{
     /*////////////////////////////////
-    TODO: add Enum - typedef - repeat until - semanticError - printList & conccatenate strings
+    TODO: add   typedef  - semanticError 
     ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
@@ -118,6 +118,9 @@
     ///////////////////////////////////////////////
     // Functions
     int argCount = 0;
+    // used to fill enum values
+    struct nodeType* enumValues;
+    struct nodeType*  printStringValues;
     struct nodeType* arithmatic(struct nodeType* op1, struct nodeType* op2, char op); 
     struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op); 
     struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op); 
@@ -131,9 +134,8 @@
     struct nodeType* identifierValue(char* name)
     void setInit(char* name); 
     void setUsed(char* name); 
-    char* valueString(struct nodeType* node);
+    // char* valueString(struct nodeType* node);
     void printNode(struct nodeType* node); 
-    struct nodeType*  returnNode(struct nodeType* node); //TODO: $$ =(struct nodeType* )returnNode($2);node with return value & type >> How to handle X = func() 
     void checkInitialized(char* name); 
     void checkSameScope(char* name);
     void checkOutOfScope(char* name);
@@ -197,7 +199,7 @@
 
 //------------------------
 // Flow Statements
-%type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop
+%type <TYPE_VOID> ifCondition switchCase case caseList dummyNonTerminal while forLoop repeatUntil
 
 //------------------------
 // Decleration
@@ -227,6 +229,7 @@ controlStatement: while
                 | forLoop
                 | {quadPushEndLabel(++endLabelNum);} ifCondition {quadPopEndLabel();}
                 | switchCase
+                | repeatUntil
                 ;
 
 
@@ -305,19 +308,40 @@ case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");
 /*---------------------------------------*/
 
 /* ----------------Loops--------------- */
-while: WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
-      ;
-forLoop: FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
+while: 
+        WHILE '(' expr ')' {printf("Found a while loop!\n")} '{' codeBlock  '}' 
+        ;
+forLoop: 
+        FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
         | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         | FOR '(' IDENTIFIER ':' expr '<-' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         
        ;// for (i : 0 -> 4)
-
+repeatUntil: 
+        REPEAT '{' {enterScope();} codeBlock '}'{exitScope();} UNTIL '(' expr ')' ';' {} //TODO: implement This assignment
+        ;
 /*---------------------------------------*/
+
+/* ----------------Enumerations--------------- */
+enumDef:	           
+        ENUM IDENTIFIER '{' enumBody '}'        {checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} {enumCounter=0;}
+        ;
+                        
+enumBody:
+        IDENTIFIER                              {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = 0; updateIdentifierValue($1,enumValues);}
+        | IDENTIFIER '=' exp                    {checkSameScope($1); nodeNodeTypeCheck(enumValues, $3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues)}
+        | enumBody ',' IDENTIFIER               {checkSameScope($3); insert($3, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal++; updateIdentifierValue($3, enumValues)}
+        | enumBody ',' IDENTIFIER '=' exp       {checkSameScope($3); nodeNodeTypeCheck(enumValues, $5); insert($3, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($5, "int")->value.intVal; updateIdentifierValue($3, enumValues)}
+        
+enumDeclaration: 
+        IDENTIFIER IDENTIFIER                   {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 0, 0, scopes[scope_idx-1]);}
+        | IDENTIFIER IDENTIFIER '=' exp         {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int"))}
+        ;
+
 
 /* ------------Statement----------------- */
 printList:  expr
-            | printList ',' expr {$$ = $1;} {char* str1 = $$->value.stringVal; char* str2 = valueString($3);  strcat(str1, str2); $$->value.stringVal =  str1} // Concatenate str2 to str1 (result is stored in str1)
+            | printList ',' expr                {char* str1 = castingTo($3, "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1} // Concatenate str2 to str1 (result is stored in str1)
             ;
 statement: assignment {;}
             | expr {printf("aloo\n");}
@@ -326,7 +350,7 @@ statement: assignment {;}
             | BREAK 		                    {break;} //TODO: check this 
             | CONTINUE 		                    {continue;} 
             | RETURN 		                    {return;} 
-            | RETURN expr 		                {returnNode($2);} 
+            | RETURN expr 		                {$$ = $2;} 
             | PRINT '(' expr ')' 		        {printNode($3);}
             | PRINT '(' printList ')' 		    {$$ = $3;} 
             ;            
@@ -347,7 +371,7 @@ codeBlock:  statements {printf("inside code block \n");}
          ;
 /*---------------------------------------*/
 
-/* ------------Functions----------------- */
+/* ------------Functions----------------- */ //TODO: How to handle X = func() 
 functionArgs: dataType IDENTIFIER   {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
             | dataType IDENTIFIER {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ','  functionArgs
             ;   
@@ -371,6 +395,15 @@ struct nodeType* createIntNode(int value) {
     node->isConst = 1;
     node->value.intVal = value;
     return node;
+}
+
+// Create String Node
+
+struct nodeType* createStringNode(char* value) {
+    struct nodeType* node = malloc(sizeof(struct nodeType));
+    node->type = "string";
+    node->isConst = 0;
+    node->value.stringVal = strdup(value);
 }
 // Create Node
 struct nodeType* createNode(char* type) {
@@ -723,20 +756,20 @@ void updateIdentifierValue(char* name, struct nodeType* node);{
     }
     
     if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
-        symbol_Table [identifier_sym_table_index].value.intVal = node->value.intVal;
+        symbol_Table [identifier_sym_table_index].value.intVal = castingTo(node, "int")->value.intVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0)
-        symbol_Table[identifier_sym_table_index].value.floatVal = node->value.floatVal;
+        symbol_Table[identifier_sym_table_index].value.floatVal = castingTo(node, "float")->value.floatVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0)
-        symbol_Table[identifier_sym_table_index].value.boolVal = node->value.boolVal;
+        symbol_Table[identifier_sym_table_index].value.boolVal = castingTo(node, "bool")->value.boolVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
-        symbol_Table[identifier_sym_table_index].value.stringVal = node->value.stringVal;
+        symbol_Table[identifier_sym_table_index].value.stringVal = castingTo(node, "string")->value.stringVal;
 }
 
-char* valueString(struct nodeType* node){
-    struct nodeType* str_p = malloc(sizeof(struct nodeType));
-    str_p = castingTo(node,"string")
-    return str_p->value.stringVal;
-}
+// char* valueString(struct nodeType* node){
+//     struct nodeType* str_p = malloc(sizeof(struct nodeType));
+//     str_p = castingTo(node,"string")
+//     return str_p->value.stringVal;
+// }
 
 void printNode(struct nodeType* node){
     struct nodeType* str_p = malloc(sizeof(struct nodeType));
@@ -947,6 +980,8 @@ void quadPopEndLabel(){
       
 }
 int main(void) {
+    //enumValues = createIntNode(0); //TODO: test this
+    //printStringValues = createStringNode("");
     yyparse();
     return 0;
 }

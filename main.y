@@ -272,11 +272,11 @@ program:
         ;
 
 /*------Control Statements----------*/
-controlStatement: while
-                | forLoop
+controlStatement: {quadPushStartLabel(++startLabelNum);} while {quadPopStartLabel();}
+                | forLoop {quadPopStartLabel();}
                 | {quadPushEndLabel(++endLabelNum);} ifCondition {quadPopEndLabel();}
-                | switchCase
-                | repeatUntil
+                | {quadPushEndLabel(++endLabelNum);} switchCase {quadPopEndLabel();}
+                | {quadPushStartLabel(++startLabelNum);} repeatUntil {quadPopStartLabel();}
                 ;
 
 
@@ -340,7 +340,7 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
 
 /* ----------------Conditions--------------- */
-ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum);} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {printf("asdasd");} {exitScope();quadJumpEndLabel();quadPopLabel();} elseCondition {;}
+ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum);} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {printf("asdasd");} {quadJumpEndLabel(); exitScope(); quadPopLabel();} elseCondition {;}
              ;
 elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
@@ -353,7 +353,7 @@ caseList : caseList case
          | case 
          ;
 
-case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");} expr
+case    : CASE {printf("before case \n");} expr {quadPeakLastIdentifierStack(); quadJumpFalseLabel(++labelNum);} ':' {printf("inside case  \n");} expr statements {quadPopLabel();}
         | DEFAULT ':'    statements {;}
         ;
 
@@ -362,16 +362,16 @@ case    : CASE {printf("before case \n");} expr  ':' {printf("inside case  \n");
 
 /* ----------------Loops--------------- */
 while: 
-        WHILE '(' expr ')' {printf("Found a while loop!\n");} '{' codeBlock  '}' 
+        WHILE '(' expr ')' {printf("Found a while loop!\n");} {quadJumpFalseLabel(++labelNum);} '{'{enterScope();} codeBlock  '}' {/*end*/ exitScope(); quadJumpStartLabel(); quadPopLabel();}    {;}
         ;
 forLoop: 
-        FOR '(' {printf("for \n");} assignment ';' {printf("for \n");} expr ';' assignment ')' '{' codeBlock '}'
+        FOR '(' {printf("for \n");} assignment ';' {printf("for \n");}  {quadPushStartLabel(++startLabelNum);} expr ';' {quadJumpFalseLabel(++labelNum);} assignment ')' '{'{enterScope();} codeBlock '}'{exitScope(); quadJumpStartLabel(); quadPopLabel();} {;}
         | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         | FOR '(' IDENTIFIER ':' expr '<-' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         
        ;// for (i : 0 -> 4)
 repeatUntil: 
-        REPEAT '{' {enterScope();} codeBlock '}'{exitScope();} UNTIL '(' expr ')' ';' {} //TODO: implement This assignment
+        REPEAT '{' {enterScope();} codeBlock '}'{exitScope();} UNTIL '(' expr ')' ';' {quadJumpFalseLabel(++labelNum); quadJumpStartLabel(); quadPopLabel();} //TODO: implement This assignment
         ;
 /*---------------------------------------*/
 
@@ -400,7 +400,7 @@ statement: assignment {;}
             | expr {printf("aloo\n");}
             | decleration {;}
             | EXIT 		                        {exit(EXIT_SUCCESS);}
-            | BREAK 		                    {;} //TODO: 
+            | BREAK 		                    {quadJumpEndLabel();} //TODO: 
             | CONTINUE 		                    {;} 
             | RETURN 		                    {quadReturn();} 
             | RETURN expr 		                {quadReturn(); $$ = $2;} 

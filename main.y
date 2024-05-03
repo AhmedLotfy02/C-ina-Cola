@@ -1,6 +1,6 @@
 %{
     /*////////////////////////////////
-    TODO: add Enum - typedef - repeat until - semanticError -checkConstIF in all expr rules - printList & conccatenate strings
+    TODO: add Enum - typedef - repeat until - semanticError - printList & conccatenate strings
     ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
@@ -385,9 +385,95 @@ struct nodeType* createNode(char* type) {
 // Op functions 
 //-------------------------------------------------------------------------------  
 
+struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement //Log_SEMANTIC_ERROR(TYPE_MISMATCH)
+    struct nodeType* casted_ptr = malloc(sizeof(struct nodeType));
+    casted_ptr->isConst = term->isConst;
+    if(strcmp(type, "int") == 0){   // convert to int
+        casted_ptr->type = "int";
+        if(strcmp(term->type, "float") == 0){
+            casted_ptr->value.intVal = (int)term->value.floatVal;
+        }
+        else if(strcmp(term->type, "bool") == 0){
+            casted_ptr->value.intVal = (int)term->value.boolVal;
+        }
+        else if(strcmp(term->type, "string") == 0){
+            // remove double quotes from start and end of string
+            char *str = strdup(term->value.stringVal);
+            casted_ptr->value.intVal = atoi(str);
+        }
+        else{
+            /* printf("Invalid type\n"); */
+            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+        }
+    }
+    else if(strcmp(type, "float") == 0){  // convert to float
+        casted_ptr->type = "float";
+        if(strcmp(term->type, "int") == 0){
+            casted_ptr->value.floatVal = (float)term->value.intVal;
+        }
+        else if(strcmp(term->type, "bool") == 0){
+            casted_ptr->value.floatVal = (float)term->value.boolVal;
+        }
+        else if(strcmp(term->type, "string") == 0){
+            // remove double quotes from start and end of string
+            char *str = strdup(term->value.stringVal);
+            casted_ptr->value.floatVal = atof(str);
+        }
+        else{
+            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+        }
+    }
+    else if(strcmp(type, "bool") == 0){  // convert to bool
+        casted_ptr->type = "bool";
+        if(strcmp(term->type, "int") == 0){
+            casted_ptr->value.boolVal = (int)term->value.intVal != 0;
+        }
+        else if(strcmp(term->type, "float") == 0){
+            casted_ptr->value.boolVal = (int)term->value.floatVal !=0 ;
+        }
+        else if(strcmp(term->type, "string") == 0){
+            // remove double quotes from start and end of string
+            char *str = strdup(term->value.stringVal);
+            if (strcmp("", str) == 0) {//Only EMPTY string
+                casted_ptr->value.boolVal = true;
+            }
+            else{
+                casted_ptr->value.boolVal = false;
+            }
+        }
+        else{
+            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+        }
+    }
+    else if(strcmp(type, "string") == 0){ // convert to string
+        casted_ptr->type = "string";
+        if(strcmp(term->type, "int") == 0){
+            char t[100];
+            sprintf(t, "%d", term->value.intVal);
+            casted_ptr->value.stringVal = strdup(t);
+        }
+        else if(strcmp(term->type, "float") == 0){
+            char t[100];
+            sprintf(t, "%f", term->value.floatVal);
+            casted_ptr->value.stringVal = strdup(t);
+        }
+        else if(strcmp(term->type, "bool") == 0){
+            char t[100];
+            sprintf(t, "%d", term->value.boolVal);
+            casted_ptr->value.stringVal = strdup(t);
+        }
+        else{
+            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+        }
+    } 
+    return casted_ptr;    
+}
+
+
 // Arithmatic
 struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char op){
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    final_result->isConst=((op1->isConst)&&(op2->isConst));
     
     if(strcmp(op1->type, "int") == 0){
         if(op2->type == "float"){
@@ -502,6 +588,7 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     bool_op2 = castingTo(op2,"bool")    
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    final_result->isConst=((op1->isConst)&&(op2->isConst));
     final_result->type = "bool";
  
     if(strcmp(op, "==") == 0){
@@ -538,6 +625,7 @@ struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char op){
     }
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
+    final_result->isConst=((op1->isConst)&&(op2->isConst));
     final_result->type = "bool";
     
     if(strcmp(op, "!") == 0){
@@ -602,90 +690,6 @@ void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
     return;
 }
 
-struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement //Log_SEMANTIC_ERROR(TYPE_MISMATCH)
-    struct nodeType* casted_ptr = malloc(sizeof(struct nodeType));
-    casted_ptr->isConst = term->isConst;
-    if(strcmp(type, "int") == 0){   // convert to int
-        casted_ptr->type = "int";
-        if(strcmp(term->type, "float") == 0){
-            casted_ptr->value.intVal = (int)term->value.floatVal;
-        }
-        else if(strcmp(term->type, "bool") == 0){
-            casted_ptr->value.intVal = (int)term->value.boolVal;
-        }
-        else if(strcmp(term->type, "string") == 0){
-            // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            casted_ptr->value.intVal = atoi(str);
-        }
-        else{
-            /* printf("Invalid type\n"); */
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
-        }
-    }
-    else if(strcmp(type, "float") == 0){  // convert to float
-        casted_ptr->type = "float";
-        if(strcmp(term->type, "int") == 0){
-            casted_ptr->value.floatVal = (float)term->value.intVal;
-        }
-        else if(strcmp(term->type, "bool") == 0){
-            casted_ptr->value.floatVal = (float)term->value.boolVal;
-        }
-        else if(strcmp(term->type, "string") == 0){
-            // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            casted_ptr->value.floatVal = atof(str);
-        }
-        else{
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
-        }
-    }
-    else if(strcmp(type, "bool") == 0){  // convert to bool
-        casted_ptr->type = "bool";
-        if(strcmp(term->type, "int") == 0){
-            casted_ptr->value.boolVal = (int)term->value.intVal != 0;
-        }
-        else if(strcmp(term->type, "float") == 0){
-            casted_ptr->value.boolVal = (int)term->value.floatVal !=0 ;
-        }
-        else if(strcmp(term->type, "string") == 0){
-            // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            if (strcmp("", str) == 0) {//Only EMPTY string
-                casted_ptr->value.boolVal = true;
-            }
-            else{
-                casted_ptr->value.boolVal = false;
-            }
-        }
-        else{
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
-        }
-    }
-    else if(strcmp(type, "string") == 0){ // convert to string
-        casted_ptr->type = "string";
-        if(strcmp(term->type, "int") == 0){
-            char t[100];
-            sprintf(t, "%d", term->value.intVal);
-            casted_ptr->value.stringVal = strdup(t);
-        }
-        else if(strcmp(term->type, "float") == 0){
-            char t[100];
-            sprintf(t, "%f", term->value.floatVal);
-            casted_ptr->value.stringVal = strdup(t);
-        }
-        else if(strcmp(term->type, "bool") == 0){
-            char t[100];
-            sprintf(t, "%d", term->value.boolVal);
-            casted_ptr->value.stringVal = strdup(t);
-        }
-        else{
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
-        }
-    } 
-    return casted_ptr;    
-}
-
 
 struct nodeType* identifierValue(char* name){
     int identifier_sym_table_index = computeIdentifierIndex(name);
@@ -696,6 +700,7 @@ struct nodeType* identifierValue(char* name){
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));;
     final_result->type = symbol_Table[identifier_sym_table_index].type;
+    final_result->isConst = symbol_Table[identifier_sym_table_index].isConst;
 
     if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
         final_result->value.intVal = symbol_Table[identifier_sym_table_index].value.intVal;

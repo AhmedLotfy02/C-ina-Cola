@@ -326,10 +326,10 @@ expr:
 
 term: 
         INTEGER                   {quadPushInt($1); printf("integer");}  { $$ = createIntNode($1);    $$->value.intVal = $1;}
-        | FLOAT_NUMBER            {printf("float");}    { $$ = createNode("float");  $$->value.floatVal = $1;}
+        | FLOAT_NUMBER            {quadPushFloat($1); printf("float");}    { $$ = createNode("float");  $$->value.floatVal = $1;}
         | STRING                  {printf("string\n");} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
         | TRUE_VAL                {quadPushInt(1); printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
-        | FALSE_VAL               {quadPushInt(0); printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
+        | FALSE_VAL               {quadPushInt(); printf("bool\n");}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
         | IDENTIFIER              {printf("hello identifier  \n");} {checkOutOfScope($1); checkInitialized($1); $$ = identifierValue($1); setUsed($1);}   
         | '(' term ')'            { $$ = $2; }
         ;

@@ -16,7 +16,12 @@ lex.yy.c: main.l
 a.exe: main.tab.c lex.yy.c
 	gcc -g ./main.tab.c ./lex.yy.c -o a.exe
 
+# Rule for running with functions.c
+run: a.exe ./test/functions.c
+	./a.exe < ./test/functions.c
+
 # Rule for cleaning intermediate files
 clean:
 	rm -f main.tab.c lex.yy.c a.exe
+
 

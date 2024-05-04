@@ -93,19 +93,10 @@
     void quadPopLastIdentifierStack();
 
     int argCount = 0;
-    int sym_table_idx = 0;
 
     int funcPointer = -1;
     int paramCount = 0;
 
-    #define MAX_STACK_SIZE 100
-    int labelNum = 0;
-    int labelStackPointer = -1;
-    int labelStack[MAX_STACK_SIZE];
-
-    int endLabelNum = 0;
-    int endLabelstackPointer = -1;
-    int endLabelStack[MAX_STACK_SIZE];
 
     int lastIdentifierStackPointer = -1;
     char lastIdentifierStack[MAX_STACK_SIZE];
@@ -120,10 +111,7 @@
 
     void quadStartEnum(char enumName);
     void quadEndEnum(char enumName);
-    int enumCounter = 0;
 
-                // 23
-    
     ////////////////////////////////////////////////////////////////////////
     // nodeType as in section
     struct nodeType{
@@ -161,8 +149,6 @@
     void enterScope();
     void exitScope();
     ///////////////////////////////////////////////
-    // Functions
-    int argCount = 0;
     // used to fill enum values
     struct nodeType* enumValues;
     struct nodeType*  printStringValues;
@@ -253,7 +239,7 @@
 // Decleration
 %token <TYPE_DATA_MODIFIER> CONST
 %token <TYPE_DATA_TYPE> INT_DATA_TYPE FLOAT_DATA_TYPE STRING_DATA_TYPE BOOL_DATA_TYPE VOID_DATA_TYPE
-%type <TYPE_NODE> dataType decleration
+%type <TYPE_NODE> dataType decleration functionCall
 %token <TYPE_STR> IDENTIFIER
 
 //------------------------
@@ -786,7 +772,7 @@ void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
 }
 
 void updateSymbolParam(char* symbol, int param){
-    int bucket = computeSymbolIndex(symbol);
+    int bucket = computeIdentifierIndex(symbol);
     symbol_Table [bucket].value.intVal = param;
 }
 

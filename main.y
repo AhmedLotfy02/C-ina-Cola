@@ -266,7 +266,7 @@ controlStatement: {quadPushStartLabel(++startLabelNum);} while {quadPopStartLabe
 
 
 /* Decleration */
-dataModifier: CONST        {printf("{*inside Rule*} dataModifier -> CONST : \n");}
+dataModifier: CONST        {printf("{*inside Rule*} dataModifier -> CONST . : \n");}
 
 dataType: INT_DATA_TYPE    {printf("{*inside Rule*} dataModifier -> INT_DATA_TYPE : \n");} { $$ = createIntNode(0); }
         | FLOAT_DATA_TYPE  {printf("{*inside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");} { $$ = createNode("float"); }

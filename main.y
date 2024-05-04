@@ -187,7 +187,7 @@
     void checkConst(char* name);
     void checkConstIF(struct nodeType* node);
 
-    void updateSymbolParam(char symbol, int param);
+    void updateSymbolParam(char* symbol, int param);
 
 %}
 /* Yacc definitions */
@@ -785,7 +785,7 @@ void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
     return;
 }
 
-void updateSymbolParam(char symbol, int param){
+void updateSymbolParam(char* symbol, int param){
     int bucket = computeSymbolIndex(symbol);
     symbol_Table [bucket].value.intVal = param;
 }

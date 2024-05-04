@@ -78,17 +78,17 @@
     void quadPopEndLabel();
     void quadPushInt(int val);
     // =====================
-    void quadPopIdentifier(char symbol);
-    void quadPushIdentifier(char symbol);
+    void quadPopIdentifier(char* symbol);
+    void quadPushIdentifier(char* symbol);
     void quadInstruction(const char* instruction);
     void quadPushFloat(float val);
     void quadPushString(char* str);
-    void quadStartFunction(char function);
-    void quadEndFunction(char function);
-    void quadCallFunction(char function);
+    void quadStartFunction(char* function);
+    void quadEndFunction(char* function);
+    void quadCallFunction(char* function);
     void quadReturn();
 
-    void quadPushLastIdentifierStack(char identifier);
+    void quadPushLastIdentifierStack(char* identifier);
     void quadPeakLastIdentifierStack(); 
     void quadPopLastIdentifierStack();
 
@@ -99,7 +99,7 @@
 
 
     int lastIdentifierStackPointer = -1;
-    char lastIdentifierStack[MAX_STACK_SIZE];
+    char* lastIdentifierStack[MAX_STACK_SIZE];
 
     void quadJumpStartLabel();
     void quadPushStartLabel(int startLabelNum);
@@ -109,8 +109,8 @@
     int startLabelstackPointer = -1;
     int startLabelStack[MAX_STACK_SIZE];
 
-    void quadStartEnum(char enumName);
-    void quadEndEnum(char enumName);
+    void quadStartEnum(char* enumName);
+    void quadEndEnum(char* enumName);
 
     ////////////////////////////////////////////////////////////////////////
     // nodeType as in section
@@ -785,7 +785,7 @@ void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
         //Log_SEMANTIC_ERROR(TYPE_MISMATCH, node->type); 
     }
     return;
-}
+}//
 
 void updateSymbolParam(char* symbol, int param){
     int bucket = computeIdentifierIndex(symbol);
@@ -1020,19 +1020,19 @@ void setUsed(char* name) {
 
 ////////////////  QUAD GENERATION //////////////////////
 
-void quadStartFunction(char function) // TODO: make it string isnetad of char
+void quadStartFunction(char* function) // TODO: make it string isnetad of char
 {
         if (SHOW_Quads) {
                 printf("Quads(%d) \tPROC %c\n", line, function);
         }
 }
-void quadEndFunction(char function)
+void quadEndFunction(char* function)
 {
         if (SHOW_Quads) {
                 printf("Quads(%d) \tENDPROC %c\n", line, function);
         }
 }
-void quadCallFunction(char function)
+void quadCallFunction(char* function)
 {
         if (SHOW_Quads) {
                 printf("Quads(%d) \tCALL %c\n", line, function);
@@ -1063,7 +1063,7 @@ void quadPushFloat(float val)
                printf("Quads(%d) \tPUSH %f\n", line, val);
        }
 }
-void quadPushIdentifier(char symbol)
+void quadPushIdentifier(char* symbol)
 {
        if (SHOW_Quads) {
                printf("Quads(%d) \tPUSH %c\n", line, symbol);
@@ -1075,7 +1075,7 @@ void quadPushString(char* str)
                printf("Quads(%d) \tPUSH %s\n", line, str);
        }
 }
-void quadPopIdentifier(char symbol)
+void quadPopIdentifier(char* symbol)
 {
        if (SHOW_Quads) {
             printf("Quads(%d) \tPOP %c\n\n", line, symbol);
@@ -1126,7 +1126,7 @@ void quadPopLabel(){
                 printf("Quads(%d) Label_%d:\n",line, labelNum);
         }
 }
-void quadPushLastIdentifierStack(char identifier){
+void quadPushLastIdentifierStack(char* identifier){
         if (SHOW_Quads) {
             /* add the IDENTIFIER to the stack */
             lastIdentifierStack[++lastIdentifierStackPointer] = identifier;
@@ -1138,7 +1138,7 @@ void quadPeakLastIdentifierStack(){
         return;
     }
     /* get the last identifier from the stack */
-    char identifier = lastIdentifierStack[lastIdentifierStackPointer];
+    char* identifier = lastIdentifierStack[lastIdentifierStackPointer];
     if (SHOW_Quads) {
             printf("Quads(%d) \tPUSH %c\n", line, identifier);
     }
@@ -1149,7 +1149,7 @@ void quadPopLastIdentifierStack(){
         return;
     }
     /* get the last IDENTIFIER from the stack */
-    char identifier = lastIdentifierStack[lastIdentifierStackPointer--];
+    char* identifier = lastIdentifierStack[lastIdentifierStackPointer--];
 }
 
 
@@ -1178,13 +1178,13 @@ void quadPopStartLabel(){
     int startLabelNum = startLabelStack[startLabelstackPointer--];
 }
 
-void quadStartEnum(char enumName) 
+void quadStartEnum(char* enumName) 
 {
         if (SHOW_Quads) {
                 printf("Quads(%d) \tENUM %c\n", line, enumName);
         }
 }
-void quadEndEnum(char enumName) 
+void quadEndEnum(char* enumName) 
 {
         if (SHOW_Quads) {
                 printf("Quads(%d) \tENDENUM %c\n", line, enumName);

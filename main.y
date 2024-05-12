@@ -310,13 +310,14 @@ expr:
         ;
 
 term: 
-        INTEGER                   {printf("{*inside Rule*} term -> INTEGER   : \n");} {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1;}
-        | FLOAT_NUMBER            {printf("{*inside Rule*} term -> FLOAT_NUMBER    : \n");} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1;}
-        | STRING                  {printf("{*inside Rule*} term -> STRING    : \n");} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
-        | TRUE_VAL                {printf("{*inside Rule*} term -> TRUE_VAL    : \n");} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
-        | FALSE_VAL               {printf("{*inside Rule*} term -> FALSE_VAL    : \n");} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
-        | IDENTIFIER              {printf("{*inside Rule*} term -> IDENTIFIER    : \n");} {quadPushIdentifier($1);} {checkOutOfScope($1); checkInitialized($1); $$ = identifierValue($1); setUsed($1);}   
-        | '(' term ')'            {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; }
+        INTEGER                {printf("======================================\n");}    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",$1);}  {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1;}
+                               
+        | FLOAT_NUMBER         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_NUMBER     %d  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1;}
+        | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
+        | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL     : \n");} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
+        | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL    : \n");} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
+        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {checkOutOfScope($1); checkInitialized($1); setUsed($1);$$ = identifierValue($1); }   
+        | '(' term ')'        {printf("======================================\n");}     {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; }
         ;
 
 
@@ -407,7 +408,7 @@ statements:   statement ';'                                 {printf("{*inside Ru
 /*---------------------------------------*/
 
 /* ------------Code Block----------------- */
-codeBlock:  statements                                      {printf("{*inside Rule*} codeBlock -> statements ';' : \n");}
+codeBlock:  statements                                    {printf("======================================");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");}
          ;
 /*---------------------------------------*/
 
@@ -754,7 +755,7 @@ int computeIdentifierIndex(char* name){
     printf("{*inside Function*} computeIdentifierIndex(char* name = %s) :\n", name);
     int lvl;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(symbol_Table[i].name == name) {
+        if(strcmp(symbol_Table[i].name ,name)==0) {
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) {
                 if(lvl == scopes[j]) {
@@ -896,12 +897,15 @@ void checkSameScope(char* name) {
     printf("{*inside Function*} checkSameScope(char* name = %s)\n", name );
     int lvl;
     for(int i=0; i<sym_table_idx ;i++) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0 ) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             if(lvl == scopes[scope_idx-1]) {
                  printf("Error: variable %s already declared in the same scope\n", name); 
               
             }
+        }
+        if(i==sym_table_idx-1){
+            printf("Variable is not declared\n");
         }
     }
 }
@@ -911,9 +915,14 @@ void checkOutOfScope(char* name) {
     printf("{*inside Function*} checkOutOfScope(char* name = %s)\n", name );
     int lvl;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+
+        printf("Symbol INstance :%s\n",symbol_Table[i].name);
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
+            
             lvl = symbol_Table[i].scope;
+            printf("lvl : %d\n",lvl);
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                printf("scopes[j] : %d\n",scopes[j]);
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
                     return;
                 }
@@ -930,7 +939,7 @@ void checkInitialized(char* name) {
     printf("{*inside Function*} checkInitialized(char* name = %s)\n", name );
     int lvl;
     for(int i=sym_table_idx-1;i>=0;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
@@ -949,7 +958,7 @@ void checkInitialized(char* name) {
 void checkConst(char* name) {
     printf("{*inside Function*} checkConst(char* name = %s)\n", name );
     for(int i=0; i<sym_table_idx ;i++) {
-        if(symbol_Table[i].name == name) {
+        if(strcmp(symbol_Table[i].name ,name)==0) {
              for(int j=scope_idx-1;j>=0;j--) {
                 if(symbol_Table[i].scope == scopes[j]) {
                     if(symbol_Table[i].isConst == 1) {
@@ -989,7 +998,7 @@ void setInit(char* name) {
     printf("{*inside Function*} setInit(char* name = %s)\n", name );
     int lvl;
     for(int i=sym_table_idx-1;i>=0;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
@@ -1005,7 +1014,7 @@ void setUsed(char* name) {
     printf("{*inside Function*} setUsed(char* name = %s)\n", name );
     int lvl;
     for(int i=sym_table_idx-1;i>=0;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
@@ -1023,19 +1032,19 @@ void setUsed(char* name) {
 void quadStartFunction(char* function) // TODO: make it string isnetad of char
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tPROC %c\n", line, function);
+                printf("Quads(%d) \tPROC %s\n", line, function);
         }
 }
 void quadEndFunction(char* function)
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tENDPROC %c\n", line, function);
+                printf("Quads(%d) \tENDPROC %s\n", line, function);
         }
 }
 void quadCallFunction(char* function)
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tCALL %c\n", line, function);
+                printf("Quads(%d) \tCALL %s\n", line, function);
         }
 }
 void quadReturn()
@@ -1066,7 +1075,7 @@ void quadPushFloat(float val)
 void quadPushIdentifier(char* symbol)
 {
        if (SHOW_Quads) {
-               printf("Quads(%d) \tPUSH %c\n", line, symbol);
+               printf("Quads(%d) \tPUSH %s\n", line, symbol);
        }
 }
 void quadPushString(char* str)
@@ -1078,7 +1087,7 @@ void quadPushString(char* str)
 void quadPopIdentifier(char* symbol)
 {
        if (SHOW_Quads) {
-            printf("Quads(%d) \tPOP %c\n\n", line, symbol);
+            printf("Quads(%d) \tPOP %s\n\n", line, symbol);
        }
 }
 void quadPushEndLabel(int endLabelNum)
@@ -1140,7 +1149,7 @@ void quadPeakLastIdentifierStack(){
     /* get the last identifier from the stack */
     char* identifier = lastIdentifierStack[lastIdentifierStackPointer];
     if (SHOW_Quads) {
-            printf("Quads(%d) \tPUSH %c\n", line, identifier);
+            printf("Quads(%d) \tPUSH %s\n", line, identifier);
     }
 }
 void quadPopLastIdentifierStack(){
@@ -1181,13 +1190,13 @@ void quadPopStartLabel(){
 void quadStartEnum(char* enumName) 
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tENUM %c\n", line, enumName);
+                printf("Quads(%d) \tENUM %s\n", line, enumName);
         }
 }
 void quadEndEnum(char* enumName) 
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tENDENUM %c\n", line, enumName);
+                printf("Quads(%d) \tENDENUM %s\n", line, enumName);
         }
 }
 

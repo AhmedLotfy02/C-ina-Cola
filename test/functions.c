@@ -1,10 +1,5 @@
-int x = 9;
-if (x < 4 || x > 9)
-{
-    x = 0;
-}
+int x = 2;
 
-int func(int x)
-{
-    int result = x;
-}
+// int func(int x)
+// {
+// }

@@ -123,8 +123,7 @@
             char* stringVal;
             int boolVal;
 
-        } value;
-        
+        } value;        
     };
     // Symbol Table
     struct symbol {
@@ -249,10 +248,10 @@
 %%
 program:
         // program expr '\n' { printf("%d\n", $2->value.intVal); }
-        | functionDefinition {printf("{*inside Rule*} program -> functionDefinition : \n");}
-        | statements {printf("{*inside Rule*} program -> statements : \n");}
-        | statements program {printf("{*inside Rule*} program -> statements program : \n");}
-        | functionDefinition program {printf("{*inside Rule*} program -> functionDefinition program : \n");;}        
+        | functionDefinition {printf("{*inside Rule*} program -> functionDefinition : \n");} {printf("{*outside Rule*} program -> functionDefinition : \n");}
+        | statements {printf("{*inside Rule*} program -> statements : \n");}{printf("{*outside Rule*} program -> statements : \n");}
+        | statements program {printf("{*inside Rule*} program -> statements program : \n");}{printf("{*outside Rule*} program -> statements program : \n");}
+        | functionDefinition program {printf("{*inside Rule*} program -> functionDefinition program : \n");}     {printf("{*outside Rule*} program -> functionDefinition program : \n");}   
         |  {;}
         ;
 
@@ -266,58 +265,58 @@ controlStatement: {quadPushStartLabel(++startLabelNum);} while {quadPopStartLabe
 
 
 /* Decleration */
-dataModifier: CONST        {printf("{*inside Rule*} dataModifier -> CONST . : \n");}
+dataModifier: CONST        {printf("{*inside Rule*} dataModifier -> CONST . : \n");}{printf("{*outside Rule*} dataModifier -> CONST . : \n");}
 
-dataType: INT_DATA_TYPE    {printf("{*inside Rule*} dataModifier -> INT_DATA_TYPE : \n");} { $$ = createIntNode(0); }
-        | FLOAT_DATA_TYPE  {printf("{*inside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");} { $$ = createNode("float"); }
-        | STRING_DATA_TYPE {printf("{*inside Rule*} dataModifier -> STRING_DATA_TYPE : \n");} { $$ = createNode("string"); }
-        | BOOL_DATA_TYPE   {printf("{*inside Rule*} dataModifier -> BOOL_DATA_TYPE : \n");} { $$ = createNode("bool"); }
-        | VOID_DATA_TYPE   {printf("{*inside Rule*} dataModifier -> VOID_DATA_TYPE : \n");} { ; }
+dataType: INT_DATA_TYPE    {printf("{*inside Rule*} dataModifier -> INT_DATA_TYPE : \n");} { $$ = createIntNode(0); }{printf("{*outside Rule*} dataModifier -> INT_DATA_TYPE : \n");}
+        | FLOAT_DATA_TYPE  {printf("{*inside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");} { $$ = createNode("float"); }{printf("{*outside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");}
+        | STRING_DATA_TYPE {printf("{*inside Rule*} dataModifier -> STRING_DATA_TYPE : \n");} { $$ = createNode("string"); }{printf("{*outside Rule*} dataModifier -> STRING_DATA_TYPE : \n");}
+        | BOOL_DATA_TYPE   {printf("{*inside Rule*} dataModifier -> BOOL_DATA_TYPE : \n");} { $$ = createNode("bool"); }{printf("{*outside Rule*} dataModifier -> BOOL_DATA_TYPE : \n");}
+        | VOID_DATA_TYPE   {printf("{*inside Rule*} dataModifier -> VOID_DATA_TYPE : \n");} { ; }{printf("{*outside Rule*} dataModifier -> VOID_DATA_TYPE : \n");}
         ;
 /* */
-decleration: dataType IDENTIFIER                          {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");} {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printSymbolTable(); quadPopIdentifier($2);}
-           | dataType IDENTIFIER  '='  expr               {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}  {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($2,$4); setInit($2); } {printSymbolTable(); quadPopIdentifier($2);} 
-           | dataModifier dataType IDENTIFIER  '='  expr  {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}  {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($3,$5); setInit($3); }  {printSymbolTable();} {printSymbolTable();  quadPopIdentifier($3);}            
+decleration: dataType IDENTIFIER                          {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");} {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printSymbolTable(); quadPopIdentifier($2);}{printf("{*outside Rule*} decleration -> dataType IDENTIFIER : \n");}
+           | dataType IDENTIFIER  '='  expr               {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}  {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($2,$4); setInit($2); } {printSymbolTable(); quadPopIdentifier($2);} {printf("{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}
+           | dataModifier dataType IDENTIFIER  '='  expr  {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}  {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($3,$5); setInit($3); }  {printSymbolTable();} {printSymbolTable();  quadPopIdentifier($3);}{printf("{*outside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}            
            ;
            
 /* Assignment */
 assignment: 
-            IDENTIFIER '='  expr                    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");} { checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); } {printSymbolTable();}{printf(castingTo($3,"string")->value.stringVal); $$ = $3; quadPopIdentifier($1);}
-            | enumDef                               {printf("{*inside Rule*} assignment -> enumDef   : \n");}            
-            | ENUM enumDeclaration                  {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");}
+            IDENTIFIER '='  expr                    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");} { checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); } {printSymbolTable();}{printf(castingTo($3,"string")->value.stringVal); $$ = $3; quadPopIdentifier($1);}{printf("{*outside Rule*} assignment -> IDENTIFIER '='  expr   : \n");}
+            | enumDef                               {printf("{*inside Rule*} assignment -> enumDef   : \n");}{printf("{*outside Rule*} assignment -> enumDef   : \n");}             
+            | ENUM enumDeclaration                  {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");}{printf("{*outside Rule*} assignment -> ENUM enumDeclaration   : \n");}
             ;
 
 /* Expression */
 expr:
-        term                      {printf("{*inside Rule*} expr -> term   : \n");} { $$ = $1; } 
-        | '(' dataType ')' term   {printf("{*inside Rule*} expr ->  '(' dataType ')' term   : \n");} {quadInstruction("CAST"); $$ = castingTo($4, $2->type);}
-        | '-' term                {printf("{*inside Rule*} expr -> '-' term   : \n");} {quadInstruction("NEG"); $$ = Negation($2); }
-        | expr '+' expr           {printf("{*inside Rule*} expr -> expr '+' expr   : \n");} {quadInstruction("ADD"); $$ = arithmatic($1,$3,"+"); } 
-        | expr '-' expr           {printf("{*inside Rule*} expr -> expr '-' expr   : \n");} {quadInstruction("SUB"); $$ = arithmatic($1,$3,"-"); }
-        | expr '*' expr           {printf("{*inside Rule*} expr -> expr '*' expr   : \n");} {quadInstruction("MUL"); $$ = arithmatic($1,$3,"*"); }
-        | expr '/' expr           {printf("{*inside Rule*} expr -> expr '/' expr   : \n");} {quadInstruction("DIV"); $$ = arithmatic($1,$3,"/"); }
-        | expr '%' expr           {printf("{*inside Rule*} expr -> expr '%' expr   : \n");} {quadInstruction("MOD"); $$ = arithmatic($1,$3,"%"); }
-        | expr EQ expr            {printf("{*inside Rule*} expr -> expr EQ expr   : \n");} {quadInstruction("EQ");  $$ = doComparison($1,$3,"==");} 
-        | expr NEQ expr           {printf("{*inside Rule*} expr -> expr NEQ expr   : \n");} {quadInstruction("NEQ");  $$ = doComparison($1,$3,"!=");}
-        | expr LT expr            {printf("{*inside Rule*} expr -> expr LT expr   : \n");} {quadInstruction("LT");  $$ = doComparison($1,$3,"<"); }
-        | expr GT expr            {printf("{*inside Rule*} expr -> expr GT expr   : \n");} {quadInstruction("GT");  $$ = doComparison($1,$3,">"); }
-        | expr GEQ expr           {printf("{*inside Rule*} expr -> expr GEQ expr   : \n");} {quadInstruction("GEQ");  $$ = doComparison($1,$3,">="); }
-        | expr LEQ expr           {printf("{*inside Rule*} expr -> expr LEQ expr   : \n");} {quadInstruction("LEQ");  $$ = doComparison($1,$3,"<="); }
-        | expr AND expr           {printf("{*inside Rule*} expr -> expr AND expr   : \n");} {quadInstruction("LOGICAL_AND"); $$ = logical($1,$3,"&"); } 
-        | expr OR expr            {printf("{*inside Rule*} expr -> expr OR expr   : \n");} {quadInstruction("LOGICAL_OR"); $$ = logical($1,$3,"|"); }
-        | NOT expr                {printf("{*inside Rule*} expr -> NOT expr   : \n");} {quadInstruction("NOT"); $$ = logical($2,NULL,"!"); }
-        | '(' expr ')'            {printf("{*inside Rule*} expr -> '(' expr ')'   : \n");} { $$ = $2;}
+        term                      {printf("{*inside Rule*} expr -> term   : \n");} { $$ = $1; }{printf("{*outside Rule*} expr -> term   : \n");} 
+        | '(' dataType ')' term   {printf("{*inside Rule*} expr ->  '(' dataType ')' term   : \n");} {quadInstruction("CAST"); $$ = castingTo($4, $2->type);}{printf("{*outside Rule*} expr ->  '(' dataType ')' term   : \n");}
+        | '-' term                {printf("{*inside Rule*} expr -> '-' term   : \n");} {quadInstruction("NEG"); $$ = Negation($2); }{printf("{*outside Rule*} expr -> '-' term   : \n");}
+        | expr '+' expr           {printf("{*inside Rule*} expr -> expr '+' expr   : \n");} {quadInstruction("ADD"); $$ = arithmatic($1,$3,"+"); } {printf("{*outside Rule*} expr -> expr '+' expr   : \n");}
+        | expr '-' expr           {printf("{*inside Rule*} expr -> expr '-' expr   : \n");} {quadInstruction("SUB"); $$ = arithmatic($1,$3,"-"); } {printf("{*outside Rule*} expr -> expr '-' expr   : \n");}
+        | expr '*' expr           {printf("{*inside Rule*} expr -> expr '*' expr   : \n");} {quadInstruction("MUL"); $$ = arithmatic($1,$3,"*"); }{printf("{*outside Rule*} expr -> expr '*' expr   : \n");}
+        | expr '/' expr           {printf("{*inside Rule*} expr -> expr '/' expr   : \n");} {quadInstruction("DIV"); $$ = arithmatic($1,$3,"/"); }{printf("{*outside Rule*} expr -> expr '/' expr   : \n");}
+        | expr '%' expr           {printf("{*inside Rule*} expr -> expr '%' expr   : \n");} {quadInstruction("MOD"); $$ = arithmatic($1,$3,"%"); }{printf("{*outside Rule*} expr -> expr '%' expr   : \n");}
+        | expr EQ expr            {printf("{*inside Rule*} expr -> expr EQ expr   : \n");} {quadInstruction("EQ");  $$ = doComparison($1,$3,"==");} {printf("{*outside Rule*} expr -> expr EQ expr   : \n");}
+        | expr NEQ expr           {printf("{*inside Rule*} expr -> expr NEQ expr   : \n");} {quadInstruction("NEQ");  $$ = doComparison($1,$3,"!=");}{printf("{*outside Rule*} expr -> expr NEQ expr   : \n");} 
+        | expr LT expr            {printf("{*inside Rule*} expr -> expr LT expr   : \n");} {quadInstruction("LT");  $$ = doComparison($1,$3,"<"); }{printf("{*outside Rule*} expr -> expr LT expr   : \n");}
+        | expr GT expr            {printf("{*inside Rule*} expr -> expr GT expr   : \n");} {quadInstruction("GT");  $$ = doComparison($1,$3,">"); }{printf("{*outside Rule*} expr -> expr GT expr   : \n");}
+        | expr GEQ expr           {printf("{*inside Rule*} expr -> expr GEQ expr   : \n");} {quadInstruction("GEQ");  $$ = doComparison($1,$3,">="); }{printf("{*outside Rule*} expr -> expr GEQ expr   : \n");} 
+        | expr LEQ expr           {printf("{*inside Rule*} expr -> expr LEQ expr   : \n");} {quadInstruction("LEQ");  $$ = doComparison($1,$3,"<="); }{printf("{*outside Rule*} expr -> expr LEQ expr   : \n");}
+        | expr AND expr           {printf("{*inside Rule*} expr -> expr AND expr   : \n");} {quadInstruction("LOGICAL_AND"); $$ = logical($1,$3,"&"); } {printf("{*outside Rule*} expr -> expr AND expr   : \n");} 
+        | expr OR expr            {printf("{*inside Rule*} expr -> expr OR expr   : \n");} {quadInstruction("LOGICAL_OR"); $$ = logical($1,$3,"|"); }{printf("{*outside Rule*} expr -> expr OR expr   : \n");}
+        | NOT expr                {printf("{*inside Rule*} expr -> NOT expr   : \n");} {quadInstruction("NOT"); $$ = logical($2,NULL,"!"); }{printf("{*outside Rule*} expr -> NOT expr   : \n");}
+        | '(' expr ')'            {printf("{*inside Rule*} expr -> '(' expr ')'   : \n");} { $$ = $2;}{printf("{*outside Rule*} expr -> '(' expr ')'   : \n");}
         ;
 
 term: 
-        INTEGER                {printf("======================================\n");}    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",$1);}  {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1;}
+        INTEGER                {printf("======================================\n");}    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",$1);}  {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1;}{printf("{*outside Rule*} term -> INTEGER   %d  : \n",$1);}
                                
-        | FLOAT_NUMBER         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_NUMBER     %d  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1;}
-        | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}
-        | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL     : \n");} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;}
-        | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL    : \n");} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;}
-        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {checkOutOfScope($1); checkInitialized($1); setUsed($1);$$ = identifierValue($1); }   
-        | '(' term ')'        {printf("======================================\n");}     {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; }
+        | FLOAT_NUMBER         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_NUMBER     %d  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1;}{printf("{*outside Rule*} term -> FLOAT_NUMBER     %d  : \n",$1);}
+        | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}{printf("{*outside Rule*} term -> STRING    %s  : \n",$1);}
+        | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL     : \n");} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;}{printf("{*outside Rule*} term -> TRUE_VAL     : \n");}
+        | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL    : \n");} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;}{printf("{*outside Rule*} term -> FALSE_VAL    : \n");}
+        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {checkOutOfScope($1); checkInitialized($1); setUsed($1);$$ = identifierValue($1); }   {printf("{*outside Rule*} term -> IDENTIFIER  %s  : \n",$1);} 
+        | '(' term ')'        {printf("======================================\n");}     {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; }{printf("{*outside Rule*} term -> '(' term ')'    : \n");}
         ;
 
 
@@ -363,52 +362,52 @@ repeatUntil:
 
 /* ----------------Enumerations--------------- */
 enumDef:	           
-        ENUM IDENTIFIER {printf("{*inside Rule*} enumDef -> ENUM IDENTIFIER   : \n");}{quadStartEnum($2); checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} '{' enumBody '}' {quadEndEnum($2); enumCounter=0;}
+        ENUM IDENTIFIER {printf("{*inside Rule*} enumDef -> ENUM IDENTIFIER   : \n");}{quadStartEnum($2); checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} '{' enumBody '}' {quadEndEnum($2); enumCounter=0;}{printf("{*outside Rule*} enumDef -> ENUM IDENTIFIER   : \n");}
         ;
                         
 enumBody:
-        IDENTIFIER                               {printf("{*inside Rule*} enumBody -> IDENTIFIER   : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1,enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter); quadPopIdentifier($1);}
-        | IDENTIFIER '=' expr                    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);}
-        | IDENTIFIER ',' enumBody                {printf("{*inside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1, enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter); quadPopIdentifier($1);}
-        | IDENTIFIER '=' expr ',' enumBody       {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);}
+        IDENTIFIER                               {printf("{*inside Rule*} enumBody -> IDENTIFIER   : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1,enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER   : \n");}
+        | IDENTIFIER '=' expr                    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");} 
+        | IDENTIFIER ',' enumBody                {printf("{*inside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1, enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");}
+        | IDENTIFIER '=' expr ',' enumBody       {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);} {printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");} 
         
 enumDeclaration: 
-        IDENTIFIER IDENTIFIER                    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 0, 0, scopes[scope_idx-1]);}
-        | IDENTIFIER IDENTIFIER '=' expr         {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int")); quadPopIdentifier($2);}
+        IDENTIFIER IDENTIFIER                    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 0, 0, scopes[scope_idx-1]);}{printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");}
+        | IDENTIFIER IDENTIFIER '=' expr         {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int")); quadPopIdentifier($2);}{printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");} 
         ;
 
 
 /* ------------Statement----------------- */
 printList: 
-            expr                                {printf("{*inside Rule*} printList -> expr      : \n");} {printNode($1);}
-            | printList ',' expr                {printf("{*inside Rule*} printList -> printList ',' expr      : \n");} {char* str1 = castingTo($3, "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1;} // Concatenate str2 to str1 (result is stored in str1)
+            expr                                {printf("{*inside Rule*} printList -> expr      : \n");} {printNode($1);}{printf("{*outside Rule*} printList -> expr      : \n");}
+            | printList ',' expr                {printf("{*inside Rule*} printList -> printList ',' expr      : \n");} {char* str1 = castingTo($3, "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1;} {printf("{*outside Rule*} printList -> printList ',' expr      : \n");}// Concatenate str2 to str1 (result is stored in str1)
             ;
 statement: 
-            assignment                          {printf("{*inside Rule*} statement -> assignment  : \n");} {;}
-            | expr                              {printf("{*inside Rule*} statement ->  expr  : \n");} 
-            | decleration                       {printf("{*inside Rule*} statement ->  decleration  : \n");} {;}
-            | EXIT 		                        {printf("{*inside Rule*} statement ->  EXIT  : \n");} {exit(EXIT_SUCCESS);}
-            | BREAK 		                    {printf("{*inside Rule*} statement ->  BREAK  : \n");} {quadJumpEndLabel();} //TODO: 
-            | CONTINUE 		                    {printf("{*inside Rule*} statement ->  CONTINUE  : \n");} {;} 
-            | RETURN 		                    {printf("{*inside Rule*} statement ->  RETURN  : \n");} {quadReturn();} 
-            | RETURN expr 		                {printf("{*inside Rule*} statement ->  RETURN expr  : \n");} {quadReturn(); $$ = $2;} 
-            | PRINT  '(' expr ')' 		        {printf("{*inside Rule*} statement ->  PRINT  '(' expr ')' : \n");} {printNode($3);}
-            | PRINT  '(' printList ')' 		    {printf("{*inside Rule*} statement ->  PRINT  '(' printList ')': \n");} {$$ = $3;} 
+            assignment                          {printf("{*inside Rule*} statement -> assignment  : \n");} {;}{printf("{*outside Rule*} statement -> assignment  : \n");} 
+            | expr                              {printf("{*inside Rule*} statement ->  expr  : \n");}{printf("{*outside Rule*} statement ->  expr  : \n");}
+            | decleration                       {printf("{*inside Rule*} statement ->  decleration  : \n");} {;}{printf("{*outside Rule*} statement ->  decleration  : \n");}
+            | EXIT 		                        {printf("{*inside Rule*} statement ->  EXIT  : \n");} {exit(EXIT_SUCCESS);}{printf("{*outside Rule*} statement ->  EXIT  : \n");}
+            | BREAK 		                    {printf("{*inside Rule*} statement ->  BREAK  : \n");} {quadJumpEndLabel();}{printf("{*outside Rule*} statement ->  BREAK  : \n");}
+            | CONTINUE 		                    {printf("{*inside Rule*} statement ->  CONTINUE  : \n");} {;}{printf("{*outside Rule*} statement ->  CONTINUE  : \n");} 
+            | RETURN 		                    {printf("{*inside Rule*} statement ->  RETURN  : \n");} {quadReturn();}{printf("{*outside Rule*} statement ->  RETURN  : \n");} 
+            | RETURN expr 		                {printf("{*inside Rule*} statement ->  RETURN expr  : \n");} {quadReturn(); $$ = $2;}{printf("{*outside Rule*} statement ->  RETURN expr  : \n");}
+            | PRINT  '(' expr ')' 		        {printf("{*inside Rule*} statement ->  PRINT  '(' expr ')' : \n");} {printNode($3);}{printf("{*outside Rule*} statement ->  PRINT  '(' expr ')': \n");}
+            | PRINT  '(' printList ')' 		    {printf("{*inside Rule*} statement ->  PRINT  '(' printList ')': \n");} {$$ = $3;}{printf("{*outside Rule*} statement ->  PRINT  '(' printList ')': \n");}
             ;            
 /*---------------------------------------*/
 
 /* ------------Statements----------------- */
-statements:   statement ';'                                 {printf("{*inside Rule*} statements -> statement ';' : \n");}{;}
-            | controlStatement                              {printf("{*inside Rule*} statements -> controlStatement  : \n");}{;}
-            | statements statement ';'                      {printf("{*inside Rule*} statements -> statements statement ';'  : \n");}{;}
-            | '{'{enterScope();} codeBlock '}'              {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");}{exitScope();}
-            | statements controlStatement                   {printf("{*inside Rule*} statements -> statements controlStatement : \n");}
-            | statements '{'{enterScope();} codeBlock '}'   {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");}{exitScope();} {;}
+statements:   statement ';'                                 {printf("{*inside Rule*} statements -> statement ';' : \n");}{;}{printf("{*outside Rule*} statements -> statement ';' : \n");}     
+            | controlStatement                              {printf("{*inside Rule*} statements -> controlStatement  : \n");}{;}{printf("{*outside Rule*} statements -> controlStatement  : \n");}
+            | statements statement ';'                      {printf("{*inside Rule*} statements -> statements statement ';'  : \n");}{;}{printf("{*outside Rule*} statements -> statements statement ';'  :   \n");}
+            | '{'{enterScope();} codeBlock '}'              {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");}{exitScope();}{printf("{*outside Rule*} statements -> '{' codeBlock '}' : \n");}
+            | statements controlStatement                   {printf("{*inside Rule*} statements -> statements controlStatement : \n");}{printf("{*outside Rule*} statements -> statements controlStatement : \n");}    
+            | statements '{'{enterScope();} codeBlock '}'   {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");}{exitScope();} {;}{printf("{*outside Rule*} statements -> statements '{' codeBlock '}'  : \n");}
         ;
 /*---------------------------------------*/
 
 /* ------------Code Block----------------- */
-codeBlock:  statements                                    {printf("======================================");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");}
+codeBlock:  statements                                    {printf("======================================");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");} {printf("{*outside Rule*} codeBlock -> statements ';' : \n");}
          ;
 /*---------------------------------------*/
 

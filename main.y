@@ -1,12 +1,15 @@
 %{
     /*////////////////////////////////
     TODO: add  typedef  - semanticError 
+    TODO: Check  enum 
+    TODO: UnInitialized Value = 0 !!!!!!!! 
     ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
-    #include <stdlib.h>
+    #include <stdlib.h> 
     #include <ctype.h>
     #include <string.h>
+    
     
     void yyerror (char*);       
     int yylex(void);
@@ -166,10 +169,10 @@
     void setUsed(char* name); 
     // char* valueString(struct nodeType* node);
     void printNode(struct nodeType* node); 
-    void checkInitialized(char* name); 
-    void checkSameScope(char* name);
-    void checkOutOfScope(char* name);
-    void checkConst(char* name);
+    int checkInitialized(char* name); 
+    int checkSameScope(char* name);
+    int checkOutOfScope(char* name);
+    int checkConst(char* name);
     void checkConstIF(struct nodeType* node);
 
     void updateSymbolParam(char* symbol, int param);
@@ -248,10 +251,10 @@
 %%
 program:
         // program expr '\n' { printf("%d\n", $2->value.intVal); }
-        | functionDefinition {printf("{*inside Rule*} program -> functionDefinition : \n");} {printf("{*outside Rule*} program -> functionDefinition : \n");}
-        | statements {printf("{*inside Rule*} program -> statements : \n");}{printf("{*outside Rule*} program -> statements : \n");}
-        | statements program {printf("{*inside Rule*} program -> statements program : \n");}{printf("{*outside Rule*} program -> statements program : \n");}
-        | functionDefinition program {printf("{*inside Rule*} program -> functionDefinition program : \n");}     {printf("{*outside Rule*} program -> functionDefinition program : \n");}   
+        | functionDefinition {printf("{*inside Rule*} program -> functionDefinition : \n");} {printf("{*outside Rule*} program -> functionDefinition : \n---------------------------------\n");}
+        | statements {printf("{*inside Rule*} program -> statements : \n");}{printf("{*outside Rule*} program -> statements : \n---------------------------------\n");}
+        | statements program {printf("{*inside Rule*} program -> statements program : \n");}{printf("{*outside Rule*} program -> statements program : \n---------------------------------\n");}
+        | functionDefinition program {printf("{*inside Rule*} program -> functionDefinition program : \n");}     {printf("{*outside Rule*} program -> functionDefinition program : \n---------------------------------\n");}   
         |  {;}
         ;
 
@@ -265,58 +268,58 @@ controlStatement: {quadPushStartLabel(++startLabelNum);} while {quadPopStartLabe
 
 
 /* Decleration */
-dataModifier: CONST        {printf("{*inside Rule*} dataModifier -> CONST . : \n");}{printf("{*outside Rule*} dataModifier -> CONST . : \n");}
+dataModifier: CONST        {printf("{*inside Rule*} dataModifier -> CONST . : \n");}{printf("{*outside Rule*} dataModifier -> CONST . : \n---------------------------------\n");}
 
-dataType: INT_DATA_TYPE    {printf("{*inside Rule*} dataModifier -> INT_DATA_TYPE : \n");} { $$ = createIntNode(0); }{printf("{*outside Rule*} dataModifier -> INT_DATA_TYPE : \n");}
-        | FLOAT_DATA_TYPE  {printf("{*inside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");} { $$ = createNode("float"); }{printf("{*outside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");}
-        | STRING_DATA_TYPE {printf("{*inside Rule*} dataModifier -> STRING_DATA_TYPE : \n");} { $$ = createNode("string"); }{printf("{*outside Rule*} dataModifier -> STRING_DATA_TYPE : \n");}
-        | BOOL_DATA_TYPE   {printf("{*inside Rule*} dataModifier -> BOOL_DATA_TYPE : \n");} { $$ = createNode("bool"); }{printf("{*outside Rule*} dataModifier -> BOOL_DATA_TYPE : \n");}
-        | VOID_DATA_TYPE   {printf("{*inside Rule*} dataModifier -> VOID_DATA_TYPE : \n");} { ; }{printf("{*outside Rule*} dataModifier -> VOID_DATA_TYPE : \n");}
+dataType: INT_DATA_TYPE    {printf("{*inside Rule*} dataType -> INT_DATA_TYPE : \n");} { $$ = createIntNode(0); printf("{*outside Rule*} dataType -> INT_DATA_TYPE : \n---------------------------------\n");}
+        | FLOAT_DATA_TYPE  {printf("{*inside Rule*} dataType -> FLOAT_DATA_TYPE : \n");} { $$ = createNode("float"); printf("{*outside Rule*} dataType -> FLOAT_DATA_TYPE : \n---------------------------------\n");}
+        | STRING_DATA_TYPE {printf("{*inside Rule*} dataType -> STRING_DATA_TYPE : \n");} { $$ = createNode("string"); printf("{*outside Rule*} dataType -> STRING_DATA_TYPE : \n---------------------------------\n");}
+        | BOOL_DATA_TYPE   {printf("{*inside Rule*} dataType -> BOOL_DATA_TYPE : \n");} { $$ = createNode("bool"); printf("{*outside Rule*} dataType -> BOOL_DATA_TYPE : \n---------------------------------\n");}
+        | VOID_DATA_TYPE   {printf("{*inside Rule*} dataType -> VOID_DATA_TYPE : \n");} { ; }{printf("{*outside Rule*} dataType -> VOID_DATA_TYPE : \n---------------------------------\n");}
         ;
 /* */
-decleration: dataType IDENTIFIER                          {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");} {checkSameScope($2);  insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); } {printSymbolTable(); quadPopIdentifier($2);}{printf("{*outside Rule*} decleration -> dataType IDENTIFIER : \n");}
-           | dataType IDENTIFIER  '='  expr               {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}  {checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($2,$4); setInit($2); } {printSymbolTable(); quadPopIdentifier($2);} {printf("{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}
-           | dataModifier dataType IDENTIFIER  '='  expr  {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}  {checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue($3,$5); setInit($3); }  {printSymbolTable();} {printSymbolTable();  quadPopIdentifier($3);}{printf("{*outside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}            
+decleration: dataType IDENTIFIER                          {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");} {int updated_scope_level = checkSameScope($2);  insert($2, $1->type, 0, 0, 0, updated_scope_level); } {printSymbolTable(); quadPopIdentifier($2);}{printf("{*outside Rule*} decleration -> dataType IDENTIFIER : \n---------------------------------\n");}
+           | dataType IDENTIFIER  '='  expr               {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}  {int updated_scope_level = checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue($2,$4);} } {printSymbolTable(); quadPopIdentifier($2);} {printf("{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n---------------------------------\n");}
+           | dataModifier dataType IDENTIFIER  '='  expr  {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}  {int updated_scope_level = checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue($3,$5);}  }  {printSymbolTable();} {  quadPopIdentifier($3);}{printf("{*outside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n---------------------------------\n");}            
            ;
            
 /* Assignment */
 assignment: 
-            IDENTIFIER '='  expr                    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");} { checkOutOfScope($1); checkConst($1); identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); } {printSymbolTable();}{printf(castingTo($3,"string")->value.stringVal); $$ = $3; quadPopIdentifier($1);}{printf("{*outside Rule*} assignment -> IDENTIFIER '='  expr   : \n");}
-            | enumDef                               {printf("{*inside Rule*} assignment -> enumDef   : \n");}{printf("{*outside Rule*} assignment -> enumDef   : \n");}             
-            | ENUM enumDeclaration                  {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");}{printf("{*outside Rule*} assignment -> ENUM enumDeclaration   : \n");}
-            ;
+            IDENTIFIER '='  expr                    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");} { int Out_of_scope = checkOutOfScope($1); if (Out_of_scope == 0 ){ int constant = checkConst($1); if (constant == 0){ identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); }}} {printSymbolTable();}{printf(castingTo($3,"string")->value.stringVal); $$ = $3; quadPopIdentifier($1); printf("{*outside Rule*} assignment -> IDENTIFIER '='  expr   : \n---------------------------------\n");}
+            | enumDefinition                               {printf("{*inside Rule*} assignment -> enumDefinition   : \n");}{printf("{*outside Rule*} assignment -> enumDefinition   : \n---------------------------------\n");}             
+            | ENUM enumDeclaration                  {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");}{printf("{*outside Rule*} assignment -> ENUM enumDeclaration   : \n---------------------------------\n");}
+            ; 
 
 /* Expression */
 expr:
-        term                      {printf("{*inside Rule*} expr -> term   : \n");} { $$ = $1; }{printf("{*outside Rule*} expr -> term   : \n");} 
-        | '(' dataType ')' term   {printf("{*inside Rule*} expr ->  '(' dataType ')' term   : \n");} {quadInstruction("CAST"); $$ = castingTo($4, $2->type);}{printf("{*outside Rule*} expr ->  '(' dataType ')' term   : \n");}
-        | '-' term                {printf("{*inside Rule*} expr -> '-' term   : \n");} {quadInstruction("NEG"); $$ = Negation($2); }{printf("{*outside Rule*} expr -> '-' term   : \n");}
-        | expr '+' expr           {printf("{*inside Rule*} expr -> expr '+' expr   : \n");} {quadInstruction("ADD"); $$ = arithmatic($1,$3,"+"); } {printf("{*outside Rule*} expr -> expr '+' expr   : \n");}
-        | expr '-' expr           {printf("{*inside Rule*} expr -> expr '-' expr   : \n");} {quadInstruction("SUB"); $$ = arithmatic($1,$3,"-"); } {printf("{*outside Rule*} expr -> expr '-' expr   : \n");}
-        | expr '*' expr           {printf("{*inside Rule*} expr -> expr '*' expr   : \n");} {quadInstruction("MUL"); $$ = arithmatic($1,$3,"*"); }{printf("{*outside Rule*} expr -> expr '*' expr   : \n");}
-        | expr '/' expr           {printf("{*inside Rule*} expr -> expr '/' expr   : \n");} {quadInstruction("DIV"); $$ = arithmatic($1,$3,"/"); }{printf("{*outside Rule*} expr -> expr '/' expr   : \n");}
-        | expr '%' expr           {printf("{*inside Rule*} expr -> expr '%' expr   : \n");} {quadInstruction("MOD"); $$ = arithmatic($1,$3,"%"); }{printf("{*outside Rule*} expr -> expr '%' expr   : \n");}
-        | expr EQ expr            {printf("{*inside Rule*} expr -> expr EQ expr   : \n");} {quadInstruction("EQ");  $$ = doComparison($1,$3,"==");} {printf("{*outside Rule*} expr -> expr EQ expr   : \n");}
-        | expr NEQ expr           {printf("{*inside Rule*} expr -> expr NEQ expr   : \n");} {quadInstruction("NEQ");  $$ = doComparison($1,$3,"!=");}{printf("{*outside Rule*} expr -> expr NEQ expr   : \n");} 
-        | expr LT expr            {printf("{*inside Rule*} expr -> expr LT expr   : \n");} {quadInstruction("LT");  $$ = doComparison($1,$3,"<"); }{printf("{*outside Rule*} expr -> expr LT expr   : \n");}
-        | expr GT expr            {printf("{*inside Rule*} expr -> expr GT expr   : \n");} {quadInstruction("GT");  $$ = doComparison($1,$3,">"); }{printf("{*outside Rule*} expr -> expr GT expr   : \n");}
-        | expr GEQ expr           {printf("{*inside Rule*} expr -> expr GEQ expr   : \n");} {quadInstruction("GEQ");  $$ = doComparison($1,$3,">="); }{printf("{*outside Rule*} expr -> expr GEQ expr   : \n");} 
-        | expr LEQ expr           {printf("{*inside Rule*} expr -> expr LEQ expr   : \n");} {quadInstruction("LEQ");  $$ = doComparison($1,$3,"<="); }{printf("{*outside Rule*} expr -> expr LEQ expr   : \n");}
-        | expr AND expr           {printf("{*inside Rule*} expr -> expr AND expr   : \n");} {quadInstruction("LOGICAL_AND"); $$ = logical($1,$3,"&"); } {printf("{*outside Rule*} expr -> expr AND expr   : \n");} 
-        | expr OR expr            {printf("{*inside Rule*} expr -> expr OR expr   : \n");} {quadInstruction("LOGICAL_OR"); $$ = logical($1,$3,"|"); }{printf("{*outside Rule*} expr -> expr OR expr   : \n");}
-        | NOT expr                {printf("{*inside Rule*} expr -> NOT expr   : \n");} {quadInstruction("NOT"); $$ = logical($2,NULL,"!"); }{printf("{*outside Rule*} expr -> NOT expr   : \n");}
-        | '(' expr ')'            {printf("{*inside Rule*} expr -> '(' expr ')'   : \n");} { $$ = $2;}{printf("{*outside Rule*} expr -> '(' expr ')'   : \n");}
+        term                      {printf("{*inside Rule*} expr -> term   : \n");} { $$ = $1; printf("{*outside Rule*} expr -> term   : \n---------------------------------\n");} 
+        | '(' dataType ')' term   {printf("{*inside Rule*} expr ->  '(' dataType ')' term   : \n");} {quadInstruction("CAST"); $$ = castingTo($4, $2->type);printf("{*outside Rule*} expr ->  '(' dataType ')' term   : \n---------------------------------\n");}
+        | '-' term                {printf("{*inside Rule*} expr -> '-' term   : \n");} {quadInstruction("NEG"); $$ = Negation($2); printf("{*outside Rule*} expr -> '-' term   : \n---------------------------------\n");}
+        | expr '+' expr           {printf("{*inside Rule*} expr -> expr '+' expr   : \n");} {quadInstruction("ADD"); $$ = arithmatic($1,$3,"+"); printf("{*outside Rule*} expr -> expr '+' expr   : \n---------------------------------\n");}
+        | expr '-' expr           {printf("{*inside Rule*} expr -> expr '-' expr   : \n");} {quadInstruction("SUB"); $$ = arithmatic($1,$3,"-"); printf("{*outside Rule*} expr -> expr '-' expr   : \n---------------------------------\n");}
+        | expr '*' expr           {printf("{*inside Rule*} expr -> expr '*' expr   : \n");} {quadInstruction("MUL"); $$ = arithmatic($1,$3,"*"); printf("{*outside Rule*} expr -> expr '*' expr   : \n---------------------------------\n");}
+        | expr '/' expr           {printf("{*inside Rule*} expr -> expr '/' expr   : \n");} {quadInstruction("DIV"); $$ = arithmatic($1,$3,"/"); printf("{*outside Rule*} expr -> expr '/' expr   : \n---------------------------------\n");}
+        | expr '%' expr           {printf("{*inside Rule*} expr -> expr '%' expr   : \n");} {quadInstruction("MOD"); $$ = arithmatic($1,$3,"%"); printf("{*outside Rule*} expr -> expr '%' expr   : \n---------------------------------\n");}
+        | expr EQ expr            {printf("{*inside Rule*} expr -> expr EQ expr   : \n");} {quadInstruction("EQ");  $$ = doComparison($1,$3,"==");printf("{*outside Rule*} expr -> expr EQ expr   : \n---------------------------------\n");}
+        | expr NEQ expr           {printf("{*inside Rule*} expr -> expr NEQ expr   : \n");} {quadInstruction("NEQ");  $$ = doComparison($1,$3,"!=");printf("{*outside Rule*} expr -> expr NEQ expr   : \n---------------------------------\n");} 
+        | expr LT expr            {printf("{*inside Rule*} expr -> expr LT expr   : \n");} {quadInstruction("LT");  $$ = doComparison($1,$3,"<"); printf("{*outside Rule*} expr -> expr LT expr   : \n---------------------------------\n");}
+        | expr GT expr            {printf("{*inside Rule*} expr -> expr GT expr   : \n");} {quadInstruction("GT");  $$ = doComparison($1,$3,">"); printf("{*outside Rule*} expr -> expr GT expr   : \n---------------------------------\n");}
+        | expr GEQ expr           {printf("{*inside Rule*} expr -> expr GEQ expr   : \n");} {quadInstruction("GEQ");  $$ = doComparison($1,$3,">="); printf("{*outside Rule*} expr -> expr GEQ expr   : \n---------------------------------\n");} 
+        | expr LEQ expr           {printf("{*inside Rule*} expr -> expr LEQ expr   : \n");} {quadInstruction("LEQ");  $$ = doComparison($1,$3,"<="); printf("{*outside Rule*} expr -> expr LEQ expr   : \n---------------------------------\n");}
+        | expr AND expr           {printf("{*inside Rule*} expr -> expr AND expr   : \n");} {quadInstruction("LOGICAL_AND"); $$ = logical($1,$3,"&"); printf("{*outside Rule*} expr -> expr AND expr   : \n---------------------------------\n");} 
+        | expr OR expr            {printf("{*inside Rule*} expr -> expr OR expr   : \n");} {quadInstruction("LOGICAL_OR"); $$ = logical($1,$3,"|"); printf("{*outside Rule*} expr -> expr OR expr   : \n---------------------------------\n");}
+        | NOT expr                {printf("{*inside Rule*} expr -> NOT expr   : \n");} {quadInstruction("NOT"); $$ = logical($2,NULL,"!"); printf("{*outside Rule*} expr -> NOT expr   : \n---------------------------------\n");}
+        | '(' expr ')'            {printf("{*inside Rule*} expr -> '(' expr ')'   : \n");} { $$ = $2;printf("{*outside Rule*} expr -> '(' expr ')'   : \n---------------------------------\n");}
         ;
 
 term: 
-        INTEGER                {printf("======================================\n");}    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",$1);}  {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1;}{printf("{*outside Rule*} term -> INTEGER   %d  : \n",$1);}
+        INTEGER                {printf("======================================\n");}    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",$1);}  {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1;printf("{*outside Rule*} term -> INTEGER   %d  : \n",$1);}
                                
-        | FLOAT_NUMBER         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_NUMBER     %d  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1;}{printf("{*outside Rule*} term -> FLOAT_NUMBER     %d  : \n",$1);}
-        | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);}{printf("{*outside Rule*} term -> STRING    %s  : \n",$1);}
-        | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL     : \n");} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;}{printf("{*outside Rule*} term -> TRUE_VAL     : \n");}
-        | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL    : \n");} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;}{printf("{*outside Rule*} term -> FALSE_VAL    : \n");}
-        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {checkOutOfScope($1); checkInitialized($1); setUsed($1);$$ = identifierValue($1); }   {printf("{*outside Rule*} term -> IDENTIFIER  %s  : \n",$1);} 
-        | '(' term ')'        {printf("======================================\n");}     {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; }{printf("{*outside Rule*} term -> '(' term ')'    : \n");}
+        | FLOAT_NUMBER         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_NUMBER     %f  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1 ;printf("{*outside Rule*} term -> FLOAT_NUMBER     %f  : \n",$1);}
+        | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);printf("{*outside Rule*} term -> STRING    %s  : \n",$1);}
+        | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL   %d     : \n",$1);} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;printf("{*outside Rule*} term -> TRUE_VAL  %d      : \n---------------------------------\n",$1);}
+        | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL  %d     : \n",$1);} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;printf("{*outside Rule*} term -> FALSE_VAL    %d        : \n---------------------------------\n",$1);}
+        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {int Out_of_scope = checkOutOfScope($1); if (Out_of_scope == 0 ){int Initialized = checkInitialized($1); if ( Initialized == 1 ) {setUsed($1);$$ = identifierValue($1);} else {$$ = NULL;}} printf("{*outside Rule*} term -> IDENTIFIER  %s  : \n",$1);} 
+        | '(' term ')'        {printf("======================================\n");}     {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; printf("{*outside Rule*} term -> '(' term ')'    : \n---------------------------------\n");}
         ;
 
 
@@ -361,53 +364,53 @@ repeatUntil:
 /*---------------------------------------*/
 
 /* ----------------Enumerations--------------- */
-enumDef:	           
-        ENUM IDENTIFIER {printf("{*inside Rule*} enumDef -> ENUM IDENTIFIER   : \n");}{quadStartEnum($2); checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} '{' enumBody '}' {quadEndEnum($2); enumCounter=0;}{printf("{*outside Rule*} enumDef -> ENUM IDENTIFIER   : \n");}
+enumDefinition:	           
+        ENUM IDENTIFIER {printf("{*inside Rule*} enumDefinition -> ENUM IDENTIFIER   : \n");}{quadStartEnum($2); checkSameScope($2); insert($2, "enum", 1, 1, 0, scopes[scope_idx-1]);} '{' enumBody '}' {quadEndEnum($2); enumCounter=0;}{printf("{*outside Rule*} enumDefinition -> ENUM IDENTIFIER   : \n---------------------------------\n");}
         ;
                         
 enumBody:
-        IDENTIFIER                               {printf("{*inside Rule*} enumBody -> IDENTIFIER   : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1,enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER   : \n");}
-        | IDENTIFIER '=' expr                    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");} 
-        | IDENTIFIER ',' enumBody                {printf("{*inside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1, enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");}
-        | IDENTIFIER '=' expr ',' enumBody       {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);} {printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");} 
+        IDENTIFIER                               {printf("{*inside Rule*} enumBody -> IDENTIFIER   : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1,enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER   : \n---------------------------------\n");}
+        | IDENTIFIER '=' expr                    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr    : \n---------------------------------\n");} 
+        | IDENTIFIER ',' enumBody                {printf("{*inside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");} {checkSameScope($1); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue($1, enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter); quadPopIdentifier($1);}{printf("{*outside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n---------------------------------\n");}
+        | IDENTIFIER '=' expr ',' enumBody       {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");} {checkSameScope($1); nodeNodeTypeCheck(enumValues,$3); insert($1, "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo($3, "int")->value.intVal; updateIdentifierValue($1, enumValues); quadPopIdentifier($1);} {printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n---------------------------------\n");} 
         
-enumDeclaration: 
-        IDENTIFIER IDENTIFIER                    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 0, 0, scopes[scope_idx-1]);}{printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");}
-        | IDENTIFIER IDENTIFIER '=' expr         {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int")); quadPopIdentifier($2);}{printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");} 
+enumDeclaration: /*TODO:[Add] int Out_of_scope = checkOutOfScope($1); if (Out_of_scope == 0 ){...}*/
+        IDENTIFIER IDENTIFIER                    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 0, 0, scopes[scope_idx-1]);}{printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n---------------------------------\n");}
+        | IDENTIFIER IDENTIFIER '=' expr         {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");} {checkOutOfScope($1); identifierNodeTypeCheck($1,createNode("enum")); checkSameScope($2); insert($2, "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck($4,createIntNode(0)); updateIdentifierValue($2,castingTo($4, "int")); quadPopIdentifier($2);}{printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n---------------------------------\n");} 
         ;
 
 
 /* ------------Statement----------------- */
 printList: 
-            expr                                {printf("{*inside Rule*} printList -> expr      : \n");} {printNode($1);}{printf("{*outside Rule*} printList -> expr      : \n");}
-            | printList ',' expr                {printf("{*inside Rule*} printList -> printList ',' expr      : \n");} {char* str1 = castingTo($3, "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1;} {printf("{*outside Rule*} printList -> printList ',' expr      : \n");}// Concatenate str2 to str1 (result is stored in str1)
+            expr                                {printf("{*inside Rule*} printList -> expr      : \n");} {char* str1 = printStringValues->value.stringVal; printf("str1 : { %s }\n",str1); char* str2 = castingTo($1, "string")->value.stringVal;  printf("str2 : { %s }\n",str2); strcat(str1, str2); printStringValues->value.stringVal =  str1; printf("printStringValues : { %s }\n",printStringValues->value.stringVal);}{printf("{*outside Rule*} printList -> expr      : \n---------------------------------\n");}
+            | printList  ',' expr            {printf("{*inside Rule*} printList -> printList ',' expr      : \n");} {char* str1 = printStringValues->value.stringVal; printf("str1 : { %s }\n",str1); char* str2 = castingTo($3, "string")->value.stringVal; printf("str2 : { %s }\n",str2);  strcat(str1, str2); printStringValues->value.stringVal =  str1; printf("printStringValues : { %s }\n",printStringValues->value.stringVal);} {printf("{*outside Rule*} printList -> printList ',' expr      : \n---------------------------------\n");}// Concatenate str2 to str1 (result is stored in str1)
             ;
 statement: 
-            assignment                          {printf("{*inside Rule*} statement -> assignment  : \n");} {;}{printf("{*outside Rule*} statement -> assignment  : \n");} 
-            | expr                              {printf("{*inside Rule*} statement ->  expr  : \n");}{printf("{*outside Rule*} statement ->  expr  : \n");}
-            | decleration                       {printf("{*inside Rule*} statement ->  decleration  : \n");} {;}{printf("{*outside Rule*} statement ->  decleration  : \n");}
-            | EXIT 		                        {printf("{*inside Rule*} statement ->  EXIT  : \n");} {exit(EXIT_SUCCESS);}{printf("{*outside Rule*} statement ->  EXIT  : \n");}
-            | BREAK 		                    {printf("{*inside Rule*} statement ->  BREAK  : \n");} {quadJumpEndLabel();}{printf("{*outside Rule*} statement ->  BREAK  : \n");}
-            | CONTINUE 		                    {printf("{*inside Rule*} statement ->  CONTINUE  : \n");} {;}{printf("{*outside Rule*} statement ->  CONTINUE  : \n");} 
-            | RETURN 		                    {printf("{*inside Rule*} statement ->  RETURN  : \n");} {quadReturn();}{printf("{*outside Rule*} statement ->  RETURN  : \n");} 
-            | RETURN expr 		                {printf("{*inside Rule*} statement ->  RETURN expr  : \n");} {quadReturn(); $$ = $2;}{printf("{*outside Rule*} statement ->  RETURN expr  : \n");}
-            | PRINT  '(' expr ')' 		        {printf("{*inside Rule*} statement ->  PRINT  '(' expr ')' : \n");} {printNode($3);}{printf("{*outside Rule*} statement ->  PRINT  '(' expr ')': \n");}
-            | PRINT  '(' printList ')' 		    {printf("{*inside Rule*} statement ->  PRINT  '(' printList ')': \n");} {$$ = $3;}{printf("{*outside Rule*} statement ->  PRINT  '(' printList ')': \n");}
+            assignment                          {printf("{*inside Rule*} statement -> assignment  : \n");} {;}{printf("{*outside Rule*} statement -> assignment  : \n---------------------------------\n");} 
+            | expr                              {printf("{*inside Rule*} statement ->  expr  : \n");}{printf("{*outside Rule*} statement ->  expr  : \n---------------------------------\n");}
+            | decleration                       {printf("{*inside Rule*} statement ->  decleration  : \n");} {;}{printf("{*outside Rule*} statement ->  decleration  : \n---------------------------------\n");}
+            | EXIT 		                        {printf("{*inside Rule*} statement ->  EXIT  : \n");} {exit(EXIT_SUCCESS);}{printf("{*outside Rule*} statement ->  EXIT  : \n---------------------------------\n");}
+            | BREAK 		                    {printf("{*inside Rule*} statement ->  BREAK  : \n");} {quadJumpEndLabel();}{printf("{*outside Rule*} statement ->  BREAK  : \n---------------------------------\n");}
+            | CONTINUE 		                    {printf("{*inside Rule*} statement ->  CONTINUE  : \n");} {;}{printf("{*outside Rule*} statement ->  CONTINUE  : \n---------------------------------\n");} 
+            | RETURN 		                    {printf("{*inside Rule*} statement ->  RETURN  : \n");} {quadReturn();}{printf("{*outside Rule*} statement ->  RETURN  : \n---------------------------------\n");} 
+            | RETURN expr 		                {printf("{*inside Rule*} statement ->  RETURN expr  : \n");} {quadReturn(); $$ = $2; printf("{*outside Rule*} statement ->  RETURN expr  : \n---------------------------------\n");}
+            | PRINT  '(' expr ')' 		        {printf("{*inside Rule*} statement ->  PRINT  '(' expr ')' : \n");} {printNode($3);}{printf("{*outside Rule*} statement ->  PRINT  '(' expr ')': \n");} //TODO: Implement quadPrint();
+            | PRINT  '(' printList ')' 		    {printf("{*inside Rule*} statement ->  PRINT  '(' printList ')': \n");} {$$ = $3;  printNode(printStringValues); printf("{*outside Rule*} statement ->  PRINT  '(' printList ')': \n");} //TODO: Implement quadPrint();
             ;            
 /*---------------------------------------*/
 
 /* ------------Statements----------------- */
-statements:   statement ';'                                 {printf("{*inside Rule*} statements -> statement ';' : \n");}{;}{printf("{*outside Rule*} statements -> statement ';' : \n");}     
-            | controlStatement                              {printf("{*inside Rule*} statements -> controlStatement  : \n");}{;}{printf("{*outside Rule*} statements -> controlStatement  : \n");}
-            | statements statement ';'                      {printf("{*inside Rule*} statements -> statements statement ';'  : \n");}{;}{printf("{*outside Rule*} statements -> statements statement ';'  :   \n");}
-            | '{'{enterScope();} codeBlock '}'              {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");}{exitScope();}{printf("{*outside Rule*} statements -> '{' codeBlock '}' : \n");}
-            | statements controlStatement                   {printf("{*inside Rule*} statements -> statements controlStatement : \n");}{printf("{*outside Rule*} statements -> statements controlStatement : \n");}    
-            | statements '{'{enterScope();} codeBlock '}'   {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");}{exitScope();} {;}{printf("{*outside Rule*} statements -> statements '{' codeBlock '}'  : \n");}
+statements:   statement ';'                                 {printf("{*inside Rule*} statements -> statement ';' : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> statement ';' : \n");}     
+            | controlStatement                              {printf("{*inside Rule*} statements -> controlStatement  : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> controlStatement  : \n");}
+            | statements statement ';'                      {printf("{*inside Rule*} statements -> statements statement ';'  : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> statements statement ';'  :   \n");}
+            | '{'{enterScope();} codeBlock '}'              {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");}{exitScope();}{printf("{*outside Rule*} statements -> '{' codeBlock '}' : \n---------------------------------\n");}
+            | statements controlStatement                   {printf("{*inside Rule*} statements -> statements controlStatement : \n");}{printf("{*outside Rule*} statements -> statements controlStatement : \n---------------------------------\n");}    
+            | statements '{'{enterScope();} codeBlock '}'   {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");}{exitScope();} {;}{printf("{*outside Rule*} statements -> statements '{' codeBlock '}'  : \n---------------------------------\n");}
         ;
 /*---------------------------------------*/
 
 /* ------------Code Block----------------- */
-codeBlock:  statements                                    {printf("======================================");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");} {printf("{*outside Rule*} codeBlock -> statements ';' : \n");}
+codeBlock:  statements                                    {printf("======================================");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");} {printf("{*outside Rule*} codeBlock -> statements ';' : \n---------------------------------\n");}
          ;
 /*---------------------------------------*/
 
@@ -446,15 +449,6 @@ struct nodeType* createIntNode(int value) {
     return node;
 }
 
-// Create String Node
-
-struct nodeType* createStringNode(char* value) {
-    printf("{*inside Function*} createStringNode(char* value = %s): \n",value);
-    struct nodeType* node = malloc(sizeof(struct nodeType));
-    node->type = "string";
-    node->isConst = 0;
-    node->value.stringVal = strdup(value);
-}
 // Create Node
 struct nodeType* createNode(char* type) {
     printf("{*inside Function*} createNode(char* type = %s): \n",type);
@@ -470,6 +464,10 @@ struct nodeType* createNode(char* type) {
 //-------------------------------------------------------------------------------  
 
 struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement //Log_SEMANTIC_ERROR(TYPE_MISMATCH)
+    if (term == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return NULL;
+    }
     printf("{*inside Function*} castingTo(struct nodeType* term = %s NodeType, char *type = %s) :\n", term->type , type);
     struct nodeType* casted_ptr = malloc(sizeof(struct nodeType));
     casted_ptr->isConst = term->isConst;
@@ -482,11 +480,26 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
             casted_ptr->value.intVal = (int)term->value.boolVal;
         }
         else if(strcmp(term->type, "string") == 0){
+            //TODO: More checking for printf("strlen(string_without_quotes) => %d\n",strlen(string_without_quotes)); != char string_without_quotes[string_length]; & check //If the conversion is not valid, the function returns 0.
             // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            casted_ptr->value.intVal = atoi(str);
+            char *string_with_quotes = strdup(term->value.stringVal);
+            //printf("string_with_quotes: %s\n", string_with_quotes);
+            //printf("strlen(string_with_quotes) => %d\n",strlen(string_with_quotes));
+            int string_length = strlen(string_with_quotes) - 2; // remove 2 quotes
+            //printf("string_length => %d\n",string_length);
+            char string_without_quotes[string_length];
+            for(int i = 0; i < string_length; i++){
+                string_without_quotes[i] = string_with_quotes[i+1];
+            }
+            //printf("string_without_quotes :%s\n", string_without_quotes);
+            //printf("strlen(string_without_quotes) => %d\n",strlen(string_without_quotes));
+
+            //printf("atoi(string_without_quotes) => %d\n", atoi(string_without_quotes));
+            casted_ptr->value.intVal = atoi(string_without_quotes); //If the conversion is not valid, the function returns 0.
+            //printf("else if(strcmp(term->type, string) == 0)  str=> %s , casted_ptr->value.intVal => %d\n", string_without_quotes,casted_ptr->value.intVal);
         }
         else{
+            casted_ptr->value.intVal = term->value.intVal;
             /* printf("Invalid type\n"); */
             //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
         }
@@ -501,17 +514,23 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
         }
         else if(strcmp(term->type, "string") == 0){
             // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            casted_ptr->value.floatVal = atof(str);
+            char *string_with_quotes = strdup(term->value.stringVal);
+            int string_length = strlen(string_with_quotes) - 2; // remove 2 quotes
+            char string_without_quotes[string_length];
+            for(int i = 0; i < string_length; i++){
+                string_without_quotes[i] = string_with_quotes[i+1];
+            }
+            casted_ptr->value.floatVal = atof(string_without_quotes); //If the conversion is not valid, the function returns 0.
         }
         else{
+            casted_ptr->value.floatVal =  term->value.floatVal;
             //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
         }
     }
     else if(strcmp(type, "bool") == 0){  // convert to bool
         casted_ptr->type = "bool";
         if(strcmp(term->type, "int") == 0){
-            casted_ptr->value.boolVal = (int)term->value.intVal != 0;
+            casted_ptr->value.boolVal = term->value.intVal != 0;
         }
         else if(strcmp(term->type, "float") == 0){
             casted_ptr->value.boolVal = (int)term->value.floatVal !=0 ;
@@ -519,14 +538,15 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
         else if(strcmp(term->type, "string") == 0){
             // remove double quotes from start and end of string
             char *str = strdup(term->value.stringVal);
-            if (strcmp("", str) == 0) {//Only EMPTY string
-                casted_ptr->value.boolVal = 1;
+            if (strlen(str) == 2) {//Only EMPTY string
+                casted_ptr->value.boolVal = 0;
             }
             else{
-                casted_ptr->value.boolVal = 0;
+                casted_ptr->value.boolVal = 1;
             }
         }
         else{
+            casted_ptr->value.boolVal =  term->value.boolVal;
             //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
         }
     }
@@ -548,6 +568,7 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
             casted_ptr->value.stringVal = strdup(t);
         }
         else{
+            casted_ptr->value.stringVal =  term->value.stringVal;
             //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
         }
     } 
@@ -557,6 +578,10 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
 
 // Arithmatic
 struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op){
+    if (op1 == NULL || op2 == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return NULL;
+    }
     printf("{*inside Function*} arithmatic(struct nodeType* op1 = %s NodeType,struct nodeType* op2 = %s NodeType, char *op = %s) :\n", op1->type ,op2->type , op);
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
@@ -644,14 +669,13 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op)
     }
     else if(strcmp(op1->type, "string") == 0){
         struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
-        string_op2 = castingTo(op1,"string");
+        string_op2 = castingTo(op2,"string");
         final_result->type = "string";
          //TODO: check
-        if(strcmp(op, "+") == 0){{
+        if(strcmp(op, "+") == 0){
             char* str1 = op1->value.stringVal;
             strcat(str1, string_op2->value.stringVal);
-            final_result->value.stringVal = str1;
-            }
+            final_result->value.stringVal = str1;    
         }
         else if(strcmp(op, "-") == 0){
         }
@@ -669,6 +693,10 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op)
 
 // Comparison
 struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
+    if (op1 == NULL || op2 == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return NULL;
+    }
     printf("{*inside Function*} doComparison(struct nodeType* op1 = %s NodeType,struct nodeType* op2 = %s NodeType, char *op = %s) :\n", op1->type ,op2->type , op);
     struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
     bool_op1 = castingTo(op1,"bool");
@@ -705,8 +733,13 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
 
 // Logical
 struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op){
+    if (op1 == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return NULL;
+    }
     struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
     bool_op1 = castingTo(op1,"bool");
+    printf("bool_op1 = %d\n",bool_op1->value.boolVal);
     struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
     if (op2 != NULL){
         printf("{*inside Function*} logical(struct nodeType* op1 = %s NodeType,struct nodeType* op2 = %s NodeType, char *op = %s) :\n", op1->type ,op2->type , op);
@@ -718,17 +751,31 @@ struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op){
     }
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
-    final_result->isConst=((op1->isConst)&&(op2->isConst));
     final_result->type = "bool";
+    if(op2 == NULL){
+        final_result->isConst=(op1->isConst);
+    }
+    else{
+        final_result->isConst=((op1->isConst)&&(op2->isConst));
+    }
+    
     
     if(strcmp(op, "!") == 0){
-        final_result->value.boolVal = !op1->value.boolVal;
+        final_result->value.boolVal = (! (bool_op1->value.boolVal));
     }
     else if(strcmp(op, "&") == 0){
-        final_result->value.boolVal = op1->value.boolVal && op2->value.boolVal;
+        if (bool_op2 == NULL) {
+            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+            return NULL;
+        }
+        final_result->value.boolVal = bool_op1->value.boolVal && bool_op2->value.boolVal;
     }
     else if(strcmp(op, "|") == 0){
-        final_result->value.boolVal = op1->value.boolVal || op2->value.boolVal;
+        if (bool_op2 == NULL) {
+            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+            return NULL;
+        }        
+        final_result->value.boolVal = bool_op1->value.boolVal || bool_op2->value.boolVal;
     }
     else{
         //Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
@@ -737,6 +784,10 @@ struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op){
 
 // Unary
 struct nodeType* Negation(struct nodeType* term){
+    if (term == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return NULL;
+    }
     printf("{*inside Function*} Negation(struct nodeType* term = %s NodeType) :\n", term->type);
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->type = term->type;
@@ -747,6 +798,18 @@ struct nodeType* Negation(struct nodeType* term){
     else if(strcmp(term->type, "float") == 0){
         final_result->value.floatVal = -term->value.floatVal;
     }
+    else if(strcmp(term->type, "bool") == 0){
+        if (term->value.boolVal == 0){
+            final_result->value.intVal = 0;
+        }
+        else {
+            final_result->value.intVal = -1;
+        }
+    }
+    else{
+        final_result->value.intVal = 0;
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH);
+    }
     return final_result;
 }
 
@@ -754,21 +817,28 @@ int computeIdentifierIndex(char* name){
     printf("{*inside Function*} computeIdentifierIndex(char* name = %s) :\n", name);
     int lvl;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(strcmp(symbol_Table[i].name ,name)==0) {
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
-            for(int j=scope_idx-1;j>=0;j--) {
-                if(lvl == scopes[j]) {
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
+                    printf("{*               *}  => Varible: {%s} Index in Symbol_Table= {%d}\n",name, i);
+                    printf("{*               *}  => Varible: {%s} Scope Level = {%d}\n",name, lvl);
                     return i;
                 }
             }
         }
     }
+    printf("{*               *}  => Varible: {%s} Scope Level = -1 {Not Found}\n",name);
     return -1;
 }
 
 void identifierNodeTypeCheck(char* name , struct nodeType* node){
+    if (node == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return ;
+    }
     printf("{*inside Function*} identifierNodeTypeCheck(char* name = %s, struct nodeType* node = %s NodeType) :\n", name ,node->type);
-    int identifier_sym_table_index = computeIdentifierIndex(name);
+    int identifier_sym_table_index = computeIdentifierIndex(name); 
     if (identifier_sym_table_index < 0){
         //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
         return ;
@@ -780,6 +850,10 @@ void identifierNodeTypeCheck(char* name , struct nodeType* node){
 }
 
 void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
+    if (node1 == NULL || node2 == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return ;
+    }
     printf("{*inside Function*} nodeNodeTypeCheck(struct nodeType* node1 = %s NodeType, struct nodeType* node2 = %s NodeType) :\n", node1->type, node2->type);
     if(strcmp(node1->type, node2->type) != 0) {
         //Log_SEMANTIC_ERROR(TYPE_MISMATCH, node->type); 
@@ -799,28 +873,42 @@ struct nodeType* identifierValue(char* name){
     int identifier_sym_table_index = computeIdentifierIndex(name);
     if (identifier_sym_table_index < 0){
         //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
-        return NULL;
+        struct nodeType* final_result = malloc(sizeof(struct nodeType));
+        final_result->value.intVal = -1;
+        return final_result; //NULL;
     }
     
-    struct nodeType* final_result = malloc(sizeof(struct nodeType));;
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->type = symbol_Table[identifier_sym_table_index].type;
     final_result->isConst = symbol_Table[identifier_sym_table_index].isConst;
 
-    if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
+    if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0){
         final_result->value.intVal = symbol_Table[identifier_sym_table_index].value.intVal;
-    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0)
+        printf("{*               *} Value() = { %d }\n", final_result->value.intVal);
+    }
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0){
         final_result->value.floatVal = symbol_Table[identifier_sym_table_index].value.floatVal;
-    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0)
+        printf("{*               *} Value() = { %f }\n", final_result->value.floatVal);
+    }
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0){
         final_result->value.boolVal = symbol_Table[identifier_sym_table_index].value.boolVal;
-    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
+        printf("{*               *} Value() = { %d }\n", final_result->value.boolVal);
+    }
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0){
         final_result->value.stringVal = symbol_Table[identifier_sym_table_index].value.stringVal;
-
+        printf("{*               *} Value()  = { %s }\n", final_result->value.stringVal);
+    }
+    
     return final_result;
 }  
 
 // This function call after check that Identifier(name) is same type as node type 
 void updateIdentifierValue(char* name, struct nodeType* node){
-    printf("{*inside Function*} updateIdentifierValue(char* name = %s, struct nodeType * node = %s NodeType)\n", name, node->type);
+    if (node == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return ;
+    }
+    printf("{*inside Function*} updateIdentifierValue(char* name = %s, struct nodeType * node = %s NodeType =>Value = {%s})\n", name, node->type,castingTo(node, "string")->value.stringVal);
     int identifier_sym_table_index = computeIdentifierIndex(name);
     if (identifier_sym_table_index < 0){
         //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
@@ -844,10 +932,15 @@ void updateIdentifierValue(char* name, struct nodeType* node){
 // }
 
 void printNode(struct nodeType* node){
+    if (node == NULL) {
+        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, NULL);
+        return ;
+    }
     printf("{*inside Function*} printNode(struct nodeType* node = %s NodeType)\n", node->type);
     struct nodeType* str_p = malloc(sizeof(struct nodeType));
     str_p = castingTo(node,"string");
-    printf( str_p->value.stringVal);  
+    printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+    printStringValues->value.stringVal = strdup("");  //Free for later use
 }
 
     
@@ -866,7 +959,7 @@ void insert(char* name, char* type, int isConst, int isInit, int isUsed, int sco
     symbol_Table [sym_table_idx].scope = scope;
     ++sym_table_idx;
 
-    printf("SymbolTable() inserted: %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
+    printf("SymbolTable() inserted: %s, declared:%d, intialized:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl,symbol_Table [sym_table_idx-1].isInit, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
 }
 // Enter the scope
 void enterScope() {
@@ -892,51 +985,57 @@ void exitScope() {
     scope_idx--;
 }
 // Check if the variable is declared in the same scope
-void checkSameScope(char* name) {
+int checkSameScope(char* name) {
     printf("{*inside Function*} checkSameScope(char* name = %s)\n", name );
     int lvl;
+    int updated_scope_level = scopes[scope_idx-1]; 
     for(int i=0; i<sym_table_idx ;i++) {
         if(strcmp(symbol_Table[i].name ,name)==0 ) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             if(lvl == scopes[scope_idx-1]) {
-                 printf("Error: variable %s already declared in the same scope\n", name); 
-              
+                printf("Error: variable %s already declared in the same scope\n", name); 
+                // Ghost Varible
+                updated_scope_level = -1;     // -1: means was in scope but cleaned ,but, 0: means no scope  
             }
         }
         if(i==sym_table_idx-1){
             printf("Variable is not declared\n");
         }
     }
+    return updated_scope_level;
 }
 
 // Check if the variable is undeclared or removed out of scope
-void checkOutOfScope(char* name) {
+int checkOutOfScope(char* name) {
     printf("{*inside Function*} checkOutOfScope(char* name = %s)\n", name );
     int lvl;
+    int Out_of_scope = 0;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
 
-        printf("Symbol INstance :%s\n",symbol_Table[i].name);
+        //printf("Symbol Instance :%s\n",symbol_Table[i].name);
         if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             
             lvl = symbol_Table[i].scope;
-            printf("lvl : %d\n",lvl);
+            //printf("lvl : %d\n",lvl);
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
-                printf("scopes[j] : %d\n",scopes[j]);
+                //printf("scopes[j] : %d\n",scopes[j]);
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
-                    return;
+                    return Out_of_scope;
                 }
             }
         }
     }
     printf("Error: variable %s is out of scope\n", name);
-
+    Out_of_scope = 1;
+    return Out_of_scope; //
 }
 
 
 // this function checks if a variable is used before initialized
-void checkInitialized(char* name) {
+int checkInitialized(char* name) {
     printf("{*inside Function*} checkInitialized(char* name = %s)\n", name );
     int lvl;
+    int Initialized = 0;
     for(int i=sym_table_idx-1;i>=0;i--) {
         if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
@@ -944,28 +1043,35 @@ void checkInitialized(char* name) {
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
                     if(symbol_Table[i].isInit == 1) {
                         //Every thing is OK
-                        return;
+                        Initialized = 1;
+                        return Initialized;
                     }
                 }
             }
         }
     }
     printf("Error: variable %s is used before initialized\n", name);
+    return Initialized;
 }
 
 // Check if the node is constant or not
-void checkConst(char* name) {
+int checkConst(char* name) {
+    int constant = 0;
+    int lvl;
     printf("{*inside Function*} checkConst(char* name = %s)\n", name );
     for(int i=0; i<sym_table_idx ;i++) {
-        if(strcmp(symbol_Table[i].name ,name)==0) {
-             for(int j=scope_idx-1;j>=0;j--) {
-                if(symbol_Table[i].scope == scopes[j]) {
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) {//Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
                     if(symbol_Table[i].isConst == 1) {
                         printf("Error: variable %s is constant\n", name);
+                        constant = 1;
+                        return constant;
                     }
                     else{
                         printf("Variable %s is not constant\n", name);
-                        return;
+                        return constant;
                     }
                 }
               }
@@ -985,7 +1091,26 @@ void checkConstIF(struct nodeType* node){
 void printSymbolTable() {
     printf("{*inside Function*} printSymbolTable() \n");
     for(int i=0; i<sym_table_idx ;i++) {
-        printf("SymbolTable() : %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [i].name, symbol_Table [i].isDecl, symbol_Table [i].isConst, i); 
+        char* str_value = "";
+        if(strcmp(symbol_Table[i].type, "int") == 0){
+            char t[100];
+            sprintf(t, "%d", symbol_Table [i].value.intVal);
+            str_value = strdup(t);
+        }
+        else if(strcmp(symbol_Table[i].type, "float") == 0){
+            char t[100];
+            sprintf(t, "%f", symbol_Table [i].value.floatVal);
+            str_value = strdup(t);
+        }
+        else if(strcmp(symbol_Table[i].type, "bool") == 0){
+            char t[100];
+            sprintf(t, "%d", symbol_Table [i].value.boolVal);
+            str_value = strdup(t);
+        }
+        else if(strcmp(symbol_Table[i].type, "string") == 0){
+            str_value = symbol_Table [i].value.stringVal;
+        }
+        printf("SymbolTable() : Name: { %s }, Type: { %s }, Value: { %s }, isDeclared: { %d }, isConst: { %d }, isInit: { %d }, isUsed: { %d }, Symbol table idx: { %d } , Scope Level: { %d }\n", symbol_Table [i].name, symbol_Table [i].type, str_value, symbol_Table [i].isDecl, symbol_Table [i].isConst,symbol_Table [i].isInit, symbol_Table [i].isUsed, i,symbol_Table [i].scope); 
     }
 }
 
@@ -1203,8 +1328,13 @@ void quadEndEnum(char* enumName)
 
 int main(void) {
     //enumValues = createIntNode(0); //TODO: test this
-    //printStringValues = createStringNode("");
-        //intialize the scopes table 
+    // createStringNode("");
+    printStringValues = malloc(sizeof(struct nodeType));
+    printStringValues->type = "string";
+    printStringValues->isConst = 0;
+    printStringValues->value.stringVal = strdup("");
+    //////////
+    //intialize the scopes table 
     for (int i = 0; i < 100; i++) {
         scopes[i] = 0; //default scope = 0 (No scope)
     }

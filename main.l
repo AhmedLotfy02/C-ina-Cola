@@ -27,8 +27,8 @@ arithmeticOps   [/+*%-]
 [(){}:=,;]              {return yytext[0];}
 
 {DIGIT}+                { yylval.TYPE_INT = atoi(yytext); return INTEGER;}
-{FLOAT_NUM}             { yylval.TYPE_FLOAT = atof(yytext); return FLOAT_NUMBER;} //TODO: Check return of atof(yytext);
-{STR}		            { yylval.TYPE_STR = strdup(yytext); return STRING;}
+{FLOAT_NUM}             { yylval.TYPE_FLOAT = atof(yytext); return FLOAT_NUMBER;} 
+{STR}		            { yylval.TYPE_STR = strdup(yytext); return STRING;} //TODO: return Str without Qutoes
 
 {arithmeticOps}         {return *yytext;} /*just return the operator*/
 
@@ -73,8 +73,11 @@ arithmeticOps   [/+*%-]
 "exit"				    {return EXIT;} 
 "return"                {return RETURN;}
 
-"true"                  {return  yylval.TYPE_BOOL=1; return TRUE_VAL;}
-"false"                 {return  yylval.TYPE_BOOL=0; return FALSE_VAL;}
+"true"                  {yylval.TYPE_BOOL=1; return TRUE_VAL;}
+"True"                  {yylval.TYPE_BOOL=1; return TRUE_VAL;}
+"false"                 {yylval.TYPE_BOOL=0; return FALSE_VAL;}
+"False"                 {yylval.TYPE_BOOL=0; return FALSE_VAL;}
+
 [a-zA-Z_][a-zA-Z0-9_]*  {yylval.TYPE_STR = strdup(yytext); return IDENTIFIER;}
 
 .                       yyerror("Unknown character");/*Unexpected Token*/

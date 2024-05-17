@@ -1025,6 +1025,7 @@ int checkOutOfScope(char* name) {
             }
         }
     }
+    
     printf("Error: variable %s is out of scope\n", name);
     Out_of_scope = 1;
     return Out_of_scope; //

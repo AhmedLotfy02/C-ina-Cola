@@ -1065,7 +1065,7 @@ int checkConst(char* name) {
             for(int j=scope_idx-1;j>=0;j--) {//Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
                     if(symbol_Table[i].isConst == 1) {
-                        printf("Error: variable %s is constant\n", name);
+                        printf("Error: variable %s is constant check line %d\n", name, line);
                         constant = 1;
                         return constant;
                     }

@@ -18,8 +18,11 @@ a.exe: main.tab.c lex.yy.c
 
 # Rule for running with functions.c
 run: a.exe ./test/functions.c
-	./a.exe < ./test/functions.c
+	./a.exe < ./test/functions.c  > ./test/out/functions.out
 
+runGui: a.exe ./test/temp.c
+	./a.exe < ./test/temp.c  > ./test/out/temp.out
+	
 # Rule for cleaning intermediate files
 clean:
 	rm -f main.tab.c lex.yy.c a.exe

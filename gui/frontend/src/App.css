@@ -1,0 +1,64 @@
+.App {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 20px;
+  position: relative;
+}
+
+.background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1; 
+  width: 30%;
+  height: 40%;
+}
+
+textarea {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+button {
+  background-color: #0BB419;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin: 20px 0;
+}
+
+pre {
+  background-color: #000;
+  color: #FFF;
+  padding: 10px;
+  text-align: left;
+  width: 750px;
+  margin: 0 auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.panels-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.panel {
+  flex-basis: calc(50% - 20px);
+  margin: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.highlightQuads {
+  color: red;
+}
+

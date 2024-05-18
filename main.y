@@ -881,8 +881,15 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     final_result->type = "bool";
     int foundMatch=0;
     if(strcmp(op, "==") == 0){
+        printf("OMAR op1->value.intVal = %d\n",op1->value.intVal);
+        printf("OMAR op2->value.intVal = %d\n",op2->value.intVal);
+
+        if(op1->value.intVal == op2->value.intVal)
+            final_result->value.boolVal = 1;
+        else
+            final_result->value.boolVal = 0;
         
-        final_result->value.boolVal = op1->value.boolVal == op2->value.boolVal;
+        printf("OMAR final_result->value.boolVal = %d\n",final_result->value.boolVal);
         
     }
     else if(strcmp(op, "!=") == 0){
@@ -890,11 +897,21 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
         foundMatch=1;
     }
     else if(strcmp(op, "<") == 0){
+        printf("DEBUG OMAR\n");
+        printf("op1->value.boolVal = %d\n",op1->value.boolVal);
+        printf("op2->value.boolVal = %d\n",op2->value.boolVal);
         final_result->value.boolVal = op1->value.boolVal < op2->value.boolVal;
+        printf("final_result->value.boolVal = %d\n",final_result->value.boolVal);
         foundMatch=1;
     }
     else if(strcmp(op, ">") == 0){
-        final_result->value.boolVal = op1->value.boolVal > op2->value.boolVal;
+        printf("OMAR op1->value.boolVal = %d\n",op1->value.boolVal);
+        printf("OMAR op2->value.boolVal = %d\n",op2->value.boolVal);
+        if(op1->value.boolVal > op2->value.boolVal)
+             final_result->value.boolVal = 1;
+        else
+            final_result->value.boolVal = 0;
+        printf("OMAR final_result->value.boolVal = %d\n",final_result->value.boolVal);
         foundMatch=1;
     }
     else if(strcmp(op, "<=") == 0){
@@ -1107,7 +1124,7 @@ void updateIdentifierValue(char* name, struct nodeType* node){
         return;
     }
     printf("DEBUG:  ifCon = %d ifConMatch = %d , fromElse= %d \n", ifCon,ifConMatch,fromElse);
-    if(ifCon == 1 && ifConMatch == 0&&fromElse==1){
+    if((ifCon == 1 && ifConMatch == 1&&fromElse==1)){
        
         return;
     }

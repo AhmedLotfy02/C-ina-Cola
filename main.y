@@ -72,36 +72,49 @@
         int Error_Line_Number = line;
         switch(Semantic_Error){
             case UNDECLARED:
-                printf("Semanic Error: Variable { %s } is Undeclared at line : { %d }\n",Variable_Name,Error_Line_Number);
+                printf("Semantic Error: Variable { %s } is Undeclared at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case REDECLARED:
-                printf("Semanic Error: Variable { %s } is Redeclared at line : { %d }\n",Variable_Name,Error_Line_Number);
+                printf("Semantic Error: Variable { %s } is Redeclared at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case OUT_OF_SCOPE:
-                printf("Semanic Error: Variable { %s } is Out of Scope at line : { %d }\n",Variable_Name,Error_Line_Number);
+                printf("Semantic Error: Variable { %s } is Out of Scope at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case UNINITIALIZED:
-                printf("Semanic Error: Variable { %s } is Uninitialized at line : { %d }\n",Variable_Name,Error_Line_Number);
+                printf("Semantic Error: Variable { %s } is Uninitialized at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case CONSTANT:
-                printf("Semanic Error: Variable { %s } is Constant at line : { %d }\n",Variable_Name,Error_Line_Number);
+                printf("Semantic Error: Variable { %s } is Constant at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case TYPE_MISMATCH:
-                printf("Semanic Error: Type Mismatch at line : { %d }\n",Error_Line_Number);
+                printf("Semantic Error: Type Mismatch at line : { %d }\n",Error_Line_Number);
                 break;
             case UNUSED:
-                printf("Semanic Error: Variable { %s } is Declared but not Used at line : { %d }\n",Variable_Name,Error_Line_Number);
+                printf("Semantic Error: Variable { %s } is Declared but not Used at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case CONSTANT_IF:
-                printf("Semanic Error: Expression is Constant in if condition at line : { %d } , and is always { %s }\n",Error_Line_Number,(Variable_Name ? "True" : "False"));
+                printf("Semantic Error: Expression is Constant in if condition at line : { %d } , and is always { %s }\n",Error_Line_Number,(Variable_Name ? "True" : "False"));
                 break;
             default:
-                printf("Semanic Error: Unknown error at line : { %d }\n",Error_Line_Number);
+                printf("Semantic Error: Unknown error at line : { %d }\n",Error_Line_Number);
                 break;
         }
-        printSymbolTable();
+      
     }
 
+    //if
+    int ifCon=0;
+    int ifConMatch=0;
+    int fromElse=0;
+
+    int switchC=0;
+    int switchMatch=0;
+    int funcFirstarg=0;
+    int funcArgCnt=0;
+    int forLoopFound=0;
+    int forLoopCnt=0;
+    int whileLoopFound=0;
+    int whileLoopCnt=0;
     // Label Stack for quads generation    
     #define MAX_STACK_SIZE 100
     int labelNum = 0;
@@ -215,7 +228,6 @@
     int checkUndeclared_and_OutOfScope(char* name);
     int checkConst(char* name);
     void checkConstIF(struct nodeType* node);
-
     void updateSymbolParam(char* symbol, int param);
 
 %}
@@ -247,7 +259,7 @@
 //-----------TOKENS-------------
 // Data Types
 %token <TYPE_INT> INTEGER
-%token <TYPE_FLOAT> FLOAT_NUMBER
+%token <TYPE_FLOAT> FLOAT_
 %token <TYPE_STR> STRING
 %token <TYPE_BOOL> TRUE_VAL 
 %token <TYPE_BOOL> FALSE_VAL 
@@ -270,7 +282,7 @@
 
 //------------------------
 // Return Types
-%type <TYPE_VOID> program codeBlock controlStatement statement statements
+%type <TYPE_VOID> program codeBlock controlStatement statement stmts
 %type <TYPE_NODE> term expr assignment printList
 
 
@@ -293,8 +305,8 @@
 program:
         // program expr '\n' { printf("%d\n", $2->value.intVal); }
         | functionDefinition {printf("{*inside Rule*} program -> functionDefinition : \n");} {printf("{*outside Rule*} program -> functionDefinition : \n---------------------------------\n");}
-        | statements {printf("{*inside Rule*} program -> statements : \n");}{printf("{*outside Rule*} program -> statements : \n---------------------------------\n");}
-        | statements program {printf("{*inside Rule*} program -> statements program : \n");}{printf("{*outside Rule*} program -> statements program : \n---------------------------------\n");}
+        | stmts {printf("{*inside Rule*} program -> statements : \n");}{printf("{*outside Rule*} program -> statements : \n---------------------------------\n");}
+        | stmts program {printf("{*inside Rule*} program -> statements program : \n");}{printf("{*outside Rule*} program -> statements program : \n---------------------------------\n");}
         | functionDefinition program {printf("{*inside Rule*} program -> functionDefinition program : \n");}     {printf("{*outside Rule*} program -> functionDefinition program : \n---------------------------------\n");}   
         |  {;}
         ;
@@ -318,14 +330,14 @@ dataType: INT_DATA_TYPE    {printf("{*inside Rule*} dataType -> INT_DATA_TYPE : 
         | VOID_DATA_TYPE   {printf("{*inside Rule*} dataType -> VOID_DATA_TYPE : \n");} { ; }{printf("{*outside Rule*} dataType -> VOID_DATA_TYPE : \n---------------------------------\n");}
         ;
 /* */
-decleration: dataType IDENTIFIER                          {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");} {int updated_scope_level = checkSameScope($2);  insert($2, $1->type, 0, 0, 0, updated_scope_level); } {printSymbolTable(); quadPopIdentifier($2);}{printf("{*outside Rule*} decleration -> dataType IDENTIFIER : \n---------------------------------\n");}
-           | dataType IDENTIFIER  '='  expr               {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}  {int updated_scope_level = checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue($2,$4);} } {printSymbolTable(); quadPopIdentifier($2);} {printf("{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n---------------------------------\n");}
-           | dataModifier dataType IDENTIFIER  '='  expr  {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}  {int updated_scope_level = checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue($3,$5);}  }  {printSymbolTable();} {  quadPopIdentifier($3);}{printf("{*outside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n---------------------------------\n");}            
+decleration: dataType IDENTIFIER                          {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");} {int updated_scope_level = checkSameScope($2);  insert($2, $1->type, 0, 0, 0, updated_scope_level); } { quadPopIdentifier($2);}{printf("{*outside Rule*} decleration -> dataType IDENTIFIER : \n---------------------------------\n");}
+           | dataType IDENTIFIER  '='  expr               {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");}  {int updated_scope_level = checkSameScope($2);  nodeNodeTypeCheck($1, $4); insert($2, $1->type, 0, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue($2,$4);} } { quadPopIdentifier($2);} {printf("{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n---------------------------------\n");}
+           | dataModifier dataType IDENTIFIER  '='  expr  {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");}  {int updated_scope_level = checkSameScope($3);  nodeNodeTypeCheck($2, $5); insert($3, $2->type, 1, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue($3,$5);}  }   {  quadPopIdentifier($3);}{printf("{*outside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n---------------------------------\n");}            
            ;
            
 /* Assignment */
 assignment: 
-            IDENTIFIER '='  expr                    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");} { int Out_of_scope = checkUndeclared_and_OutOfScope($1); if (Out_of_scope == 0 ){ int constant = checkConst($1); if (constant == 0){ identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); }}} {printSymbolTable();}{ $$ = $3; quadPopIdentifier($1); printf("{*outside Rule*} assignment -> IDENTIFIER '='  expr   : \n---------------------------------\n");}
+            IDENTIFIER '='  expr                    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");} { int Out_of_scope = checkUndeclared_and_OutOfScope($1); if (Out_of_scope == 0 ){ int constant = checkConst($1); if (constant == 0){ identifierNodeTypeCheck($1, $3); setInit($1); setUsed($1); updateIdentifierValue($1,$3); }}} { $$ = $3; quadPopIdentifier($1); printf("{*outside Rule*} assignment -> IDENTIFIER '='  expr   : \n---------------------------------\n");}
             | enumDefinition                               {printf("{*inside Rule*} assignment -> enumDefinition   : \n");}{printf("{*outside Rule*} assignment -> enumDefinition   : \n---------------------------------\n");}             
             | ENUM enumDeclaration                  {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");}{printf("{*outside Rule*} assignment -> ENUM enumDeclaration   : \n---------------------------------\n");}
             ; 
@@ -355,7 +367,7 @@ expr:
 term: 
         INTEGER                {printf("======================================\n");}    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",$1);}  {quadPushInt($1); }  { $$ = createIntNode($1);    $$->value.intVal = $1; printf("{*outside Rule*} term -> INTEGER   %d  : \n",$1);}
                                
-        | FLOAT_NUMBER         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_NUMBER     %f  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1 ;printf("{*outside Rule*} term -> FLOAT_NUMBER     %f  : \n",$1);}
+        | FLOAT_         {printf("======================================\n");}    {printf("{*inside Rule*} term -> FLOAT_     %f  : \n",$1);} {quadPushFloat($1); }    { $$ = createNode("float");  $$->value.floatVal = $1 ;printf("{*outside Rule*} term -> FLOAT_     %f  : \n",$1);}
         | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);printf("{*outside Rule*} term -> STRING    %s  : \n",$1);}
         | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL   %d     : \n",$1);} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;printf("{*outside Rule*} term -> TRUE_VAL  %d      : \n---------------------------------\n",$1);}
         | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL  %d     : \n",$1);} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;printf("{*outside Rule*} term -> FALSE_VAL    %d        : \n---------------------------------\n",$1);}
@@ -369,21 +381,21 @@ dummyNonTerminal:  {printf("inside dummy  \n");}
                 ;
 
 /* ----------------Conditions--------------- */
-ifCondition  : IF '(' expr {checkConstIF($3); quadJumpFalseLabel(++labelNum);} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {printf("asdasd");} {quadJumpEndLabel(); exitScope(); quadPopLabel();} elseCondition {;}
+ifCondition  : IF '(' {ifCon=1;} expr {checkConstIF($4); quadJumpFalseLabel(++labelNum);} {printf("IF () is detected \n");} ')' '{' {enterScope();} {printf("IF (){} is detected \n");} codeBlock '}' {quadJumpEndLabel(); exitScope(); quadPopLabel();} elseCondition {;}
              ;
 elseCondition: {printf("inside bare else  \n");}  {;}
              | ELSE {;} {printf("inside else  \n");} ifCondition {;}
-             | ELSE '{' {enterScope();} codeBlock '}' {exitScope();} {printf("else {} detected \n");} 
+             | ELSE '{' {fromElse=1;}  {enterScope();} codeBlock '}' {exitScope();} {printf("else {} detected \n");} 
              ;
 
-switchCase: SWITCH '(' IDENTIFIER ')' {printf("switch case passed  \n");} {quadPushLastIdentifierStack($3);setInit($3);} '{' {enterScope();} caseList '}' {exitScope();} {quadPopLastIdentifierStack();}
+switchCase: SWITCH '(' IDENTIFIER {setUsed($3); switchC=1;} ')' {printf("switch case passed  \n");} {quadPushLastIdentifierStack($3);setInit($3);} '{' {enterScope();} caseList '}' {exitScope();} {quadPopLastIdentifierStack();}
           ;
 caseList : caseList case 
-         | case 
+         | case  
          ;
 
-case    : CASE {printf("before case \n");} expr {quadPeakLastIdentifierStack(); quadJumpFalseLabel(++labelNum);} ':' {printf("inside case  \n");} expr statements {quadPopLabel();}
-        | DEFAULT ':'    statements {;}
+case    : CASE {printf("before case \n");} expr  {quadPeakLastIdentifierStack(); quadJumpFalseLabel(++labelNum);} ':' {printf("inside case  \n");}  stmts {quadPopLabel();}
+        | DEFAULT ':'  {switchC=0; switchMatch=0;}  stmts {;}
         ;
 
 
@@ -391,12 +403,12 @@ case    : CASE {printf("before case \n");} expr {quadPeakLastIdentifierStack(); 
 
 /* ----------------Loops--------------- */
 while: 
-        WHILE '(' expr ')' {printf("Found a while loop!\n");} {quadJumpFalseLabel(++labelNum);} '{'{enterScope();} codeBlock  '}' {/*end*/ exitScope(); quadJumpStartLabel(); quadPopLabel();}    {;}
+        WHILE '(' expr {whileLoopFound=1; }')' {printf("Found a while loop!\n");} {quadJumpFalseLabel(++labelNum);} '{'{enterScope();} codeBlock  '}' {/*end*/ exitScope(); quadJumpStartLabel(); quadPopLabel();} { whileLoopFound=0;}    {;}
         ;
 forLoop: 
-        FOR '(' {printf("for \n");} assignment ';' {printf("for \n");}  {quadPushStartLabel(++startLabelNum);} expr ';' {quadJumpFalseLabel(++labelNum);} assignment ')' '{'{enterScope();} codeBlock '}'{exitScope(); quadJumpStartLabel(); quadPopLabel();} {;}
-        | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
-        | FOR '(' IDENTIFIER ':' expr '<-' expr ')' '{' codeBlock '}' //TODO: implement This assignment
+        FOR '(' {printf("for \n"); forLoopFound=1;} decleration ';' {printf("for \n");}  {quadPushStartLabel(++startLabelNum);} expr ';' {quadJumpFalseLabel(++labelNum);} assignment ')' '{'{enterScope();} codeBlock '}'{exitScope(); quadJumpStartLabel(); quadPopLabel();} {;}
+        // | FOR '(' IDENTIFIER ':' expr '->' expr ')' '{' codeBlock '}' //TODO: implement This assignment
+        // | FOR '(' IDENTIFIER ':' expr '<-' expr ')' '{' codeBlock '}' //TODO: implement This assignment
         
        ;// for (i : 0 -> 4)
 repeatUntil: 
@@ -441,28 +453,28 @@ statement:
 /*---------------------------------------*/
 
 /* ------------Statements----------------- */
-statements:   statement ';'                                 {printf("{*inside Rule*} statements -> statement ';' : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> statement ';' : \n");}     
+stmts:   statement ';'                                 {printf("{*inside Rule*} statements -> statement ';' : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> statement ';' : \n");}     
             | controlStatement                              {printf("{*inside Rule*} statements -> controlStatement  : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> controlStatement  : \n");}
-            | statements statement ';'                      {printf("{*inside Rule*} statements -> statements statement ';'  : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> statements statement ';'  :   \n");}
+            | stmts statement ';'                      {printf("{*inside Rule*} statements -> statements statement ';'  : \n---------------------------------\n");}{;}{printf("{*outside Rule*} statements -> statements statement ';'  :   \n");}
             | '{'{enterScope();} codeBlock '}'              {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");}{exitScope();}{printf("{*outside Rule*} statements -> '{' codeBlock '}' : \n---------------------------------\n");}
-            | statements controlStatement                   {printf("{*inside Rule*} statements -> statements controlStatement : \n");}{printf("{*outside Rule*} statements -> statements controlStatement : \n---------------------------------\n");}    
-            | statements '{'{enterScope();} codeBlock '}'   {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");}{exitScope();} {;}{printf("{*outside Rule*} statements -> statements '{' codeBlock '}'  : \n---------------------------------\n");}
+            | stmts controlStatement                   {printf("{*inside Rule*} statements -> statements controlStatement : \n");}{printf("{*outside Rule*} statements -> statements controlStatement : \n---------------------------------\n");}    
+            | stmts '{'{enterScope();} codeBlock '}'   {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");}{exitScope();} {;}{printf("{*outside Rule*} statements -> statements '{' codeBlock '}'  : \n---------------------------------\n");}
         ;
 /*---------------------------------------*/
 
 /* ------------Code Block----------------- */
-codeBlock:  statements                                    {printf("======================================\n");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");} {printf("{*outside Rule*} codeBlock -> statements ';' : \n---------------------------------\n");}
+codeBlock:  stmts                                    {printf("======================================\n");}  {printf("{*inside Rule*} codeBlock -> statements ';' : \n");} {printf("{*outside Rule*} codeBlock -> statements ';' : \n---------------------------------\n");}
          ;
 /*---------------------------------------*/
 
 /* ------------Functions----------------- */ //TODO: How to handle X = func() 
-functionArgs            : dataType IDENTIFIER                   {quadPopIdentifier($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;}
-                        | dataType IDENTIFIER  {quadPopIdentifier($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;} ',' functionArgs
+functionArgs            : dataType IDENTIFIER                   {quadPopIdentifier($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]) ;funcFirstarg=sym_table_idx-1;   argCount = sym_table_idx-argCount; setInit($2);}
+                        | dataType IDENTIFIER  {quadPopIdentifier($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]);setInit($2); } ',' functionArgs
                         ;  
-functionParams          : term   {typeCheck3($1->type, symbol_Table[++funcPointer].type); paramCount--;}
+functionParams          : term   {typeCheck3($1->type, symbol_Table[++funcPointer].type); paramCount--; }
                         | term   {typeCheck3($1->type, symbol_Table[++funcPointer].type); paramCount--;} ',' functionParams
                         ;
-functionDefinition: dataType IDENTIFIER {quadStartFunction($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope();}
+functionDefinition: dataType IDENTIFIER {quadStartFunction($2);} {checkSameScope($2); insert($2, $1->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope(); setInit($2);}
                      {printf("here \n");} functionDefinitionAfter '{' codeBlock '}'  {exitScope(); quadEndFunction($2); updateSymbolParam($2, argCount);}
                   ;
 functionDefinitionAfter: '(' functionArgs ')' {printf("definitions with params  \n");}
@@ -476,7 +488,7 @@ functionCallRest        : '(' functionParams ')'             {;}
 %%
 
 void yyerror(char *s) {
-    fprintf(stderr, "%s\n", s);
+    fprintf(stderr, "%s at line %d \n", s,line);
 }
 
 
@@ -625,49 +637,28 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op)
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
     
-    if(strcmp(op1->type, "int") == 0){
-        if(op2->type == "float"){
-            struct nodeType* float_op1 = malloc(sizeof(struct nodeType));
-            float_op1 = castingTo(op1,"float");
-            final_result->type = "float";
-            
-            if(strcmp(op, "+") == 0){
-                final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
-                }
-            else if(strcmp(op, "-") == 0){
-                final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
-                }
-            else if(strcmp(op, "*") == 0){
-                if (((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) || ((op2->isConst == 1) && (op2->value.floatVal == 0))) {
-                    final_result->isConst = 1;
-                }
-                final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
-                }
-            else if(strcmp(op, "/") == 0){
-                if ((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) {
-                    final_result->isConst = 1;
-                }                
-                final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
-                }
-            else if(strcmp(op, "%") == 0){   
-                Show_Semantic_Error(TYPE_MISMATCH, "");
-                if ((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) {
-                    final_result->isConst = 1;
-                }                     
-                final_result->value.intVal = op1->value.intVal;
-                } 
-
-               
-        }
-        else{
-            struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
+    printf("DEBUG: HERE ARITHEMATIC whileLoopFound %d , whileLoopCnt = %d\n ",whileLoopFound,whileLoopCnt);
+    if(whileLoopFound==1){
+      
+        if(strcmp(op1->type, "int") == 0){
+            final_result->value.intVal = 0;
+             final_result->type = "int";
+             int acc=0;
+              struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
             int_op2 = castingTo(op2,"int");
-            final_result->type = "int";
+       for (int i=0;i<whileLoopCnt;i++){
+           
+           
             
             if(strcmp(op, "+") == 0){
-                final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
+                printf("op1->value.intVal = %d\n",op1->value.intVal);
+                printf("int_op2->value.intVal = %d\n",int_op2->value.intVal);
+                acc =acc+ op1->value.intVal + int_op2->value.intVal;
+                printf("final_result->value.intVal = %d\n",final_result->value.intVal);
                 }
-            else if(strcmp(op, "-") == 0){
+       }
+      
+             if(strcmp(op, "-") == 0){
                 final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
                 }
             else if(strcmp(op, "*") == 0){
@@ -687,113 +678,191 @@ struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op)
                     final_result->isConst = 1;
                 }                  
                 final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
+            
             } 
+             final_result->value.intVal = acc;
+
              
+    
         }
     }
-    else if(strcmp(op1->type, "float") == 0){
-        struct nodeType* float_op2 = malloc(sizeof(struct nodeType));
-        float_op2 = castingTo(op1,"float");
-        final_result->type = "float";
+    else{
+        if(strcmp(op1->type, "int") == 0){
+            if(op2->type == "float"){
+                struct nodeType* float_op1 = malloc(sizeof(struct nodeType));
+                float_op1 = castingTo(op1,"float");
+                final_result->type = "float";
+                
+                if(strcmp(op, "+") == 0){
+                    final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
+                    }
+                else if(strcmp(op, "-") == 0){
+                    final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
+                    }
+                else if(strcmp(op, "*") == 0){
+                    if (((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) || ((op2->isConst == 1) && (op2->value.floatVal == 0))) {
+                        final_result->isConst = 1;
+                    }
+                    final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
+                    }
+                else if(strcmp(op, "/") == 0){
+                    if ((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) {
+                        final_result->isConst = 1;
+                    }                
+                    final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
+                    }
+                else if(strcmp(op, "%") == 0){   
+                    Show_Semantic_Error(TYPE_MISMATCH, "");
+                    if ((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) {
+                        final_result->isConst = 1;
+                    }                     
+                    final_result->value.intVal = op1->value.intVal;
+                    } 
+
+                
+            }
+            else{
+                struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
+                int_op2 = castingTo(op2,"int");
+                final_result->type = "int";
+                
+                if(strcmp(op, "+") == 0){
+                    final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
+                    }
+                else if(strcmp(op, "-") == 0){
+                    final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
+                    }
+                else if(strcmp(op, "*") == 0){
+                    if (((op1->isConst == 1) && (op1->value.intVal == 0)) || ((int_op2->isConst == 1) && (int_op2->value.intVal == 0))) {
+                        final_result->isConst = 1;
+                    }                
+                    final_result->value.intVal = op1->value.intVal * int_op2->value.intVal;
+                    }
+                else if(strcmp(op, "/") == 0){
+                    if ((op1->isConst == 1) && (op1->value.intVal == 0)) {
+                        final_result->isConst = 1;
+                    }                 
+                    final_result->value.intVal = op1->value.intVal / int_op2->value.intVal;
+                    }  
+                else if(strcmp(op, "%") == 0){
+                    if ((op1->isConst == 1) && (op1->value.intVal == 0)) {
+                        final_result->isConst = 1;
+                    }                  
+                    final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
+                } 
+                
+            }
+        }
+        else if(strcmp(op1->type, "float") == 0){
+            struct nodeType* float_op2 = malloc(sizeof(struct nodeType));
+            float_op2 = castingTo(op1,"float");
+            final_result->type = "float";
+            
+            if(strcmp(op, "+") == 0){
+                final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "-") == 0){
+                final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "*") == 0){
+                if (((op1->isConst == 1) && (op1->value.floatVal == 0)) || ((float_op2->isConst == 1) && (float_op2->value.floatVal == 0))) {
+                    final_result->isConst = 1;
+                }            
+                final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "/") == 0){
+                if ((op1->isConst == 1) && (op1->value.floatVal == 0)) {
+                    final_result->isConst = 1;
+                }            
+                final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "%") == 0){   
+                Show_Semantic_Error(TYPE_MISMATCH, "");
+                if ((op1->isConst == 1) && (op1->value.floatVal == 0)) {
+                    final_result->isConst = 1;
+                }              
+                final_result->value.floatVal = op1->value.floatVal ; 
+            }      
         
-        if(strcmp(op, "+") == 0){
-            final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "-") == 0){
-            final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "*") == 0){
-            if (((op1->isConst == 1) && (op1->value.floatVal == 0)) || ((float_op2->isConst == 1) && (float_op2->value.floatVal == 0))) {
-                final_result->isConst = 1;
-            }            
-            final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "/") == 0){
-            if ((op1->isConst == 1) && (op1->value.floatVal == 0)) {
-                final_result->isConst = 1;
-            }            
-            final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "%") == 0){   
-            Show_Semantic_Error(TYPE_MISMATCH, "");
-            if ((op1->isConst == 1) && (op1->value.floatVal == 0)) {
-                final_result->isConst = 1;
-            }              
-            final_result->value.floatVal = op1->value.floatVal ; 
-        }      
-    
-    }
-    else if(strcmp(op1->type, "bool") == 0){
-        struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
-        bool_op2 = castingTo(op1,"bool");
-        final_result->type = "bool";
-         //TODO: check
-        if(strcmp(op, "+") == 0){
-            if (((op1->isConst == 1) && (op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
-                final_result->isConst = 1;
-            }              
-            final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "-") == 0){
-            if (((op1->isConst == 1) && (op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
-                final_result->isConst = 1;
-            }                 
-            final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "*") == 0){
-            if (((op1->isConst == 1) && (op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
-                final_result->isConst = 1;
-            }
-            final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "/") == 0){
-            if (((op1->isConst == 1) && (op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
-                final_result->isConst = 1;
-            }            
-            final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "%") == 0){
-            Show_Semantic_Error(TYPE_MISMATCH, ""); 
-            if ((op1->isConst == 1) && (op1->value.boolVal == 0)) {
-                final_result->isConst = 1;
-            }              
-            final_result->value.boolVal = op1->value.boolVal;
-        }     
-    
-    }
-    else if(strcmp(op1->type, "string") == 0){
-        struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
-        string_op2 = castingTo(op2,"string");
-        final_result->type = "string";
-         //TODO: check
-        if(strcmp(op, "+") == 0){
-            char* str1 = op1->value.stringVal;
-            strcat(str1, string_op2->value.stringVal);
-            final_result->value.stringVal = str1;    
         }
-        else if(strcmp(op, "-") == 0){
-            Show_Semantic_Error(TYPE_MISMATCH, ""); 
-            final_result->value.stringVal = op1->value.stringVal;
+        else if(strcmp(op1->type, "bool") == 0){
+            struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
+            bool_op2 = castingTo(op1,"bool");
+            final_result->type = "bool";
+            //TODO: check
+            if(strcmp(op, "+") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
+                    final_result->isConst = 1;
+                }              
+                final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "-") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
+                    final_result->isConst = 1;
+                }                 
+                final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "*") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
+                    final_result->isConst = 1;
+                }
+                final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "/") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
+                    final_result->isConst = 1;
+                }            
+                final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "%") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                if ((op1->isConst == 1) && (op1->value.boolVal == 0)) {
+                    final_result->isConst = 1;
+                }              
+                final_result->value.boolVal = op1->value.boolVal;
+            }     
+        
         }
-        else if(strcmp(op, "*") == 0){
-            Show_Semantic_Error(TYPE_MISMATCH, ""); 
-            final_result->value.stringVal = op1->value.stringVal;
+        else if(strcmp(op1->type, "string") == 0){
+            struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
+            string_op2 = castingTo(op2,"string");
+            final_result->type = "string";
+            //TODO: check
+            if(strcmp(op, "+") == 0){
+                char* str1 = op1->value.stringVal;
+                strcat(str1, string_op2->value.stringVal);
+                final_result->value.stringVal = str1;    
+            }
+            else if(strcmp(op, "-") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            }
+            else if(strcmp(op, "*") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            }
+            else if(strcmp(op, "/") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            } 
+            else if(strcmp(op, "%") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            }    
+        
         }
-        else if(strcmp(op, "/") == 0){
-            Show_Semantic_Error(TYPE_MISMATCH, ""); 
-            final_result->value.stringVal = op1->value.stringVal;
-        } 
-        else if(strcmp(op, "%") == 0){
-            Show_Semantic_Error(TYPE_MISMATCH, ""); 
-            final_result->value.stringVal = op1->value.stringVal;
-        }    
-    
     }
     return final_result;
 }
 
 // Comparison
 struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
+    if(strcmp(op,"<")==0){
+        forLoopCnt=op2->value.intVal-op1->value.intVal;
+        printf("forLoopCnt: %d\n",forLoopCnt);
+        whileLoopCnt=op2->value.intVal-op1->value.intVal;
+        printf("whileLoopCnt: %d\n",whileLoopCnt);
+    }
     if (op1 == NULL || op2 == NULL) {
         printf("Syntax Error: NULL pointer Referencing.\n");
         return NULL;
@@ -810,24 +879,47 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
     final_result->type = "bool";
- 
+    int foundMatch=0;
     if(strcmp(op, "==") == 0){
+        
         final_result->value.boolVal = op1->value.boolVal == op2->value.boolVal;
+        
     }
     else if(strcmp(op, "!=") == 0){
         final_result->value.boolVal = op1->value.boolVal != op2->value.boolVal;
+        foundMatch=1;
     }
     else if(strcmp(op, "<") == 0){
         final_result->value.boolVal = op1->value.boolVal < op2->value.boolVal;
+        foundMatch=1;
     }
     else if(strcmp(op, ">") == 0){
         final_result->value.boolVal = op1->value.boolVal > op2->value.boolVal;
+        foundMatch=1;
     }
     else if(strcmp(op, "<=") == 0){
         final_result->value.boolVal = op1->value.boolVal <= op2->value.boolVal;
+        foundMatch=1;
+
     }
     else if(strcmp(op, ">=") == 0){
         final_result->value.boolVal = op1->value.boolVal >= op2->value.boolVal;
+        foundMatch=1;
+
+    }
+    if (final_result->value.boolVal==1&&ifCon==1){
+        foundMatch=0;
+        ifConMatch=1;
+      
+    }
+    else{
+        ifConMatch=0;
+    }
+    if(switchC==1&&final_result->value.boolVal==1){
+        switchMatch=1;
+    }
+    if(forLoopFound==1&&final_result->value.boolVal==0){
+        forLoopCnt=0;
     }
     return final_result;
 }
@@ -1010,6 +1102,15 @@ struct nodeType* identifierValue(char* name){
 
 // This function call after check that Identifier(name) is same type as node type 
 void updateIdentifierValue(char* name, struct nodeType* node){
+    if(switchC=1&&switchMatch==2){
+        
+        return;
+    }
+    printf("DEBUG:  ifCon = %d ifConMatch = %d , fromElse= %d \n", ifCon,ifConMatch,fromElse);
+    if(ifCon == 1 && ifConMatch == 0&&fromElse==1){
+       
+        return;
+    }
     if (node == NULL) {
         printf("Syntax Error: NULL pointer Referencing.\n");
         return ;
@@ -1028,6 +1129,10 @@ void updateIdentifierValue(char* name, struct nodeType* node){
         symbol_Table[identifier_sym_table_index].value.boolVal = castingTo(node, "bool")->value.boolVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
         symbol_Table[identifier_sym_table_index].value.stringVal = castingTo(node, "string")->value.stringVal;
+
+    if(switchC==1&&switchMatch==1){
+        switchMatch=2;
+    }
 }
 
 // char* valueString(struct nodeType* node){
@@ -1037,6 +1142,11 @@ void updateIdentifierValue(char* name, struct nodeType* node){
 // }
 
 void printNode(struct nodeType* node){
+    printf("DEBUG:  switchC = %d switchMatch = %d \n", switchC,switchMatch);
+    printf("DEBUG:  forLoopFound = %d forLoopCnt = %d \n", forLoopFound,forLoopCnt);
+    if(switchC==1&&switchMatch==2){
+        return;
+    }
     if (node == NULL) {
         printf("Syntax Error: NULL pointer Referencing.\n");
         return ;
@@ -1044,8 +1154,24 @@ void printNode(struct nodeType* node){
     printf("{*inside Function*} printNode(struct nodeType* node = %s NodeType)\n", node->type);
     struct nodeType* str_p = malloc(sizeof(struct nodeType));
     str_p = castingTo(node,"string");
-    printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+    if(forLoopFound==1){
+        forLoopFound=0;
+        for(int i=0;i<forLoopCnt;i++){
+            printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+        }
+    }
+    else if(whileLoopFound==1){
+       
+        for(int i=0;i<whileLoopCnt;i++){
+            printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+        }
+    }
+    else
+        printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
     printStringValues->value.stringVal = strdup("");  //Free for later use
+    if(switchC==1&&switchMatch==1){
+        switchMatch=2;
+    }
 }
 
     
@@ -1204,7 +1330,7 @@ void checkConstIF(struct nodeType* exprNode){
 
 // Print the symbol table
 void printSymbolTable() {
-    printf("{*inside Function*} printSymbolTable() \n");
+    
     for(int i=0; i<sym_table_idx ;i++) {
         char* str_value = "";
         if(strcmp(symbol_Table[i].type, "int") == 0){
@@ -1464,5 +1590,6 @@ int main(void) {
     }
     yyparse();
     UnusedVaribles();
+    printSymbolTable();
     return 0;
 }

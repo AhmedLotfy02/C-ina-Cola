@@ -143,7 +143,7 @@ This project is developed using:
 
 ## 📸 **Screenshots**
 
-![GUI Example](.\Assets\Images\0.png)
+![GUI Example](./Assets/Images/0.png)
 _Main Interface_
 
 ![Run Example](./Assets\Images/1.png)

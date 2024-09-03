@@ -156,9 +156,9 @@ _Symbol Table and Compilation Debug Information_
 
 ## 🏆 **Contributors**
 
-- **[Your Name]** - Lead Developer and Documentation and Testing
-- **Kareem Ashraf** - Lex Expert and Quadruples Specialist
-- **Omar Khaled** - Yacc Expert and Semantic Analysis Specialist
+- **Ahmed Lotfy** 
+- **Kareem Ashraf**  
+- **Omar Khaled** 
 
 ---
 

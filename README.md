@@ -146,10 +146,10 @@ This project is developed using:
 ![GUI Example](./Assets/Images/0.png)
 _Main Interface_
 
-![Run Example](./Assets\Images/1.png)
+![Run Example](./Assets/Images/1.png)
 _Main Features and Example of a detected semantic error_
 
-![Syntax Error Example](./Assets\Images/2.png)
+![Syntax Error Example](./Assets/Images/2.png)
 _Symbol Table and Compilation Debug Information_
 
 ---

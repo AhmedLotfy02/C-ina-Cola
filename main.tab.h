@@ -49,7 +49,7 @@
      GT = 265,
      NOT = 266,
      INTEGER = 267,
-     FLOAT_NUMBER = 268,
+     FLOAT_ = 268,
      STRING = 269,
      TRUE_VAL = 270,
      FALSE_VAL = 271,
@@ -86,7 +86,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 184 "main.y"
+#line 239 "main.y"
 
         int TYPE_INT; 
         int TYPE_BOOL;

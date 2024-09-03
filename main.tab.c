@@ -71,64 +71,121 @@
 #line 1 "main.y"
 
     /*////////////////////////////////
-    TODO: add  typedef  - semanticError 
+    TODO: add  typedef   
+    TODO: Check  enum 
     ////////////////////////////////*/
     // USE THIS FOR TEXT FILES: Get-Content input.txt | .\a.exe
     #include <stdio.h>     
-    #include <stdlib.h>
-    #include <ctype.h>
+    #include <stdlib.h> 
     #include <string.h>
+    #include <ctype.h>
+    
     
     void yyerror (char*);       
     int yylex(void);
     void printSymbolTable();
     extern int line;
     
-    #define SHOW_SEMANTIC_ERROR 1
-    #define TYPE_MISMATCH 1
-    #define UNDECLARED 2
-    #define UNINITIALIZED 3
-    #define UNUSED 4
-    #define REDECLARED 5
-    #define CONSTANT 6
-    #define OUT_OF_SCOPE 7
-    #define CONSTANT_IF 8
-    int enumCounter = 0;
+    // Semantic Erros:
+    #define UNDECLARED 1 /*
+    //in-Case: use of IDENTIFIER in Rules: {assignment: IDENTIFIER '='  expr},{term: IDENTIFIER} ,
+    to Check if:
+        1) the IDENTIFIER is Not Declared before.
+    */
+    #define REDECLARED 2/*
+    //in-Case: Declare New IDENTIFIER in Rules: {decleration: .... IDENTIFIER ....},{...: ...IDENTIFIER...} ,
+    to Check if:
+        1) the IDENTIFIER is declared in and only in the current Scope of Program.
+    */
+    #define OUT_OF_SCOPE 3 /*
+    //in-Case: use of IDENTIFIER in Rules: {assignment: IDENTIFIER '='  expr},{term: IDENTIFIER} ,
+    to Check if:
+        1) Declared out of the current Scope and downstream to the Base scope{0} 
+        2) or Declared but Removed when Exit it's Scope and become Ghost Variable 
+    */
+    #define UNINITIALIZED 4/*
+    //in-Case: use of IDENTIFIER in Rules: {term: IDENTIFIER} ,
+    to Check if:
+        1) IDENTIFIER Variable is used before initialized 
+    */
+    #define CONSTANT 5/*
+    //in-Case: use of IDENTIFIER in Rules: {assignment: IDENTIFIER '='  expr} 
+    to Check if:
+        1) IDENTIFIER Variable is Constant in the Nearest Scope from the current Scope and downstream to the Base scope{0} 
+    */
+    #define TYPE_MISMATCH 6/*
+    //in-Case: use of IDENTIFIER in Rules: {assignment: IDENTIFIER '='  expr},{decleration: dataType IDENTIFIER  '='  expr} ,{decleration: dataModifier dataType IDENTIFIER  '='  expr }
+    //in-Case: use of IDENTIFIER in Functions: { arithmatic(struct nodeType* op1, struct nodeType*op2, char* op),doComparison(struct nodeType* op1, struct nodeType*op2, char* op),logical(struct nodeType* op1, struct nodeType* op2, char* op),identifierNodeTypeCheck(char* name , struct nodeType* node),nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2) },Negation(struct nodeType* term).
+    to Check if:
+        1) IDENTIFIER->type !=  expr->type in assignment or decleration
+        2) Using Negation() but term->type == String type.
+        3) Using arithmatic() or doComparison() or logical() ,and op1->type != op2->type passed to function.
+        4) Using arithmatic() with op1->type = Sting ,and op = {'-','*','/'}  passed to function.
+    */
+    #define UNUSED 7/*
+    //in-Case: Declare or Intialize IDENTIFIER in Rules: {assignment: IDENTIFIER '='  expr},{decleration: dataType IDENTIFIER  '='  expr} But not used ever in {term: IDENTIFIER} 
+    to Check if:
+        1) All IDENTIFIER Varibles are Declared or Intialized But not used ever in {term: IDENTIFIER, ...}  
+    */
+    #define CONSTANT_IF 8/*
+    //in-Case: use of expr in Rules: {ifCondition  : IF '(' expr ')' ...} ,
+    to Check if:
+        1) expr is Constant expression and = False
+        2) or expr is Constant expression and = True 
+        3) when expr => Constant{0} * Varible{expr} or Varible{expr} * Constant{0} 
+        4) when expr => Constant{0} / Varible{expr} 
+        5) when expr => Constant{0} % Varible{expr}
+        6) when expr => Constant{0} AND Varible{expr} or Varible{expr} AND Constant{0}
+        7) when expr => Constant{1} OR Varible{expr} or Varible{expr} OR Constant{1}
+    */
     
-    void semanticError(int semanticErr,char* c){
-        int errLine = line;
-        switch(semanticErr){
-            case TYPE_MISMATCH:
-                printf("Semanic Error: Type mismatch at line %d\n",errLine);
-                break;
+    void Show_Semantic_Error(int Semantic_Error,char* Variable_Name){
+        int Error_Line_Number = line;
+        switch(Semantic_Error){
             case UNDECLARED:
-                printf("Semanic Error: Variable %s undeclared at line %d\n",c,errLine);
-                break;
-            case UNINITIALIZED:
-                printf("Semanic Error: Variable %s uninitialized at line %d\n",c,errLine);
-                break;
-            case UNUSED:
-                printf("Warning: Variable %s declared but not used at line %d\n",c,errLine);
+                printf("Semantic Error: Variable { %s } is Undeclared at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case REDECLARED:
-                printf("Semanic Error: Variable %s redeclared at line %d\n",c,errLine);
-                break;
-            case CONSTANT:
-                printf("Semanic Error: Variable %s is constant at line %d\n",c,errLine);
+                printf("Semantic Error: Variable { %s } is Redeclared at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case OUT_OF_SCOPE:
-                printf("Semanic Error: Variable %s is out of scope at line %d\n",c,errLine);
+                printf("Semantic Error: Variable { %s } is Out of Scope at line : { %d }\n",Variable_Name,Error_Line_Number);
+                break;
+            case UNINITIALIZED:
+                printf("Semantic Error: Variable { %s } is Uninitialized at line : { %d }\n",Variable_Name,Error_Line_Number);
+                break;
+            case CONSTANT:
+                printf("Semantic Error: Variable { %s } is Constant at line : { %d }\n",Variable_Name,Error_Line_Number);
+                break;
+            case TYPE_MISMATCH:
+                printf("Semantic Error: Type Mismatch at line : { %d }\n",Error_Line_Number);
+                break;
+            case UNUSED:
+                printf("Semantic Error: Variable { %s } is Declared but not Used at line : { %d }\n",Variable_Name,Error_Line_Number);
                 break;
             case CONSTANT_IF:
-                printf("Semanic Error: Variable %s is constant in if condition at line %d\n",c,errLine);
+                printf("Semantic Error: Expression is Constant in if condition at line : { %d } , and is always { %s }\n",Error_Line_Number,(Variable_Name ? "True" : "False"));
                 break;
             default:
-                printf("Semanic Error: Unknown error at line %d\n",errLine);
+                printf("Semantic Error: Unknown error at line : { %d }\n",Error_Line_Number);
                 break;
         }
-        printSymbolTable();
+      
     }
 
+    //if
+    int ifCon=0;
+    int ifConMatch=0;
+    int fromElse=0;
+
+    int switchC=0;
+    int switchMatch=0;
+    int funcFirstarg=0;
+    int funcArgCnt=0;
+    int forLoopFound=0;
+    int forLoopCnt=0;
+    int whileLoopFound=0;
+    int whileLoopCnt=0;
     // Label Stack for quads generation    
     #define MAX_STACK_SIZE 100
     int labelNum = 0;
@@ -164,7 +221,7 @@
     void quadPopLastIdentifierStack();
 
     int argCount = 0;
-
+    int enumCounter = 0;
     int funcPointer = -1;
     int paramCount = 0;
 
@@ -194,8 +251,7 @@
             char* stringVal;
             int boolVal;
 
-        } value;
-        
+        } value;        
     };
     // Symbol Table
     struct symbol {
@@ -238,18 +294,17 @@
     void setUsed(char* name); 
     // char* valueString(struct nodeType* node);
     void printNode(struct nodeType* node); 
-    void checkInitialized(char* name); 
-    void checkSameScope(char* name);
-    void checkOutOfScope(char* name);
-    void checkConst(char* name);
+    int checkInitialized(char* name); 
+    int checkSameScope(char* name);
+    int checkUndeclared_and_OutOfScope(char* name);
+    int checkConst(char* name);
     void checkConstIF(struct nodeType* node);
-
     void updateSymbolParam(char* symbol, int param);
 
 
 
 /* Line 189 of yacc.c  */
-#line 253 "main.tab.c"
+#line 308 "main.tab.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -286,7 +341,7 @@
      GT = 265,
      NOT = 266,
      INTEGER = 267,
-     FLOAT_NUMBER = 268,
+     FLOAT_ = 268,
      STRING = 269,
      TRUE_VAL = 270,
      FALSE_VAL = 271,
@@ -323,7 +378,7 @@ typedef union YYSTYPE
 {
 
 /* Line 214 of yacc.c  */
-#line 184 "main.y"
+#line 239 "main.y"
 
         int TYPE_INT; 
         int TYPE_BOOL;
@@ -337,7 +392,7 @@ typedef union YYSTYPE
 
 
 /* Line 214 of yacc.c  */
-#line 341 "main.tab.c"
+#line 396 "main.tab.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -349,7 +404,7 @@ typedef union YYSTYPE
 
 
 /* Line 264 of yacc.c  */
-#line 353 "main.tab.c"
+#line 408 "main.tab.c"
 
 #ifdef short
 # undef short
@@ -562,18 +617,18 @@ union yyalloc
 #endif
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  70
+#define YYFINAL  71
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   584
+#define YYLAST   486
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  54
+#define YYNTOKENS  53
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  140
+#define YYNNTS  186
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  207
+#define YYNRULES  251
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  329
+#define YYNSTATES  357
 
 /* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
 #define YYUNDEFTOK  2
@@ -589,9 +644,9 @@ static const yytype_uint8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,    17,     2,     2,
-      46,    47,    15,    12,    53,    13,     2,    16,     2,     2,
+      46,    47,    15,    12,    52,    13,     2,    16,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,    50,    51,
-      52,     3,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     3,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -622,116 +677,133 @@ static const yytype_uint8 yytranslate[] =
    YYRHS.  */
 static const yytype_uint16 yyprhs[] =
 {
-       0,     0,     3,     4,     6,     8,    11,    14,    15,    16,
-      19,    21,    22,    25,    26,    29,    30,    33,    35,    36,
-      39,    40,    43,    44,    47,    48,    51,    52,    55,    56,
-      57,    62,    63,    64,    71,    72,    73,    74,    83,    84,
-      85,    86,    93,    95,    98,    99,   102,   103,   109,   110,
-     114,   115,   120,   121,   126,   127,   132,   133,   138,   139,
-     144,   145,   150,   151,   156,   157,   162,   163,   168,   169,
-     174,   175,   180,   181,   186,   187,   192,   193,   197,   198,
-     203,   204,   205,   209,   210,   211,   215,   216,   217,   221,
-     222,   223,   227,   228,   229,   233,   234,   235,   239,   240,
-     245,   246,   247,   248,   249,   250,   251,   266,   267,   269,
-     270,   271,   276,   277,   278,   285,   286,   287,   288,   289,
-     301,   304,   306,   307,   308,   309,   318,   322,   323,   324,
-     325,   326,   338,   339,   340,   341,   342,   343,   344,   362,
-     374,   386,   387,   388,   400,   401,   402,   410,   411,   414,
-     415,   420,   421,   426,   427,   434,   435,   439,   440,   446,
-     447,   450,   451,   456,   457,   460,   462,   463,   466,   467,
-     470,   471,   474,   475,   478,   479,   482,   483,   487,   488,
-     494,   495,   501,   502,   506,   507,   510,   511,   516,   517,
-     518,   524,   527,   528,   529,   530,   538,   540,   541,   545,
-     546,   547,   554,   555,   556,   557,   567,   571
+       0,     0,     3,     4,     5,     8,     9,    12,    13,    17,
+      18,    22,    23,    24,    27,    29,    30,    33,    34,    37,
+      38,    41,    42,    45,    46,    49,    50,    53,    54,    57,
+      58,    61,    62,    63,    67,    68,    69,    70,    76,    77,
+      78,    79,    87,    88,    89,    90,    99,   100,   101,   107,
+     108,   111,   112,   116,   117,   120,   121,   127,   128,   132,
+     133,   138,   139,   144,   145,   150,   151,   156,   157,   162,
+     163,   168,   169,   174,   175,   180,   181,   186,   187,   192,
+     193,   198,   199,   204,   205,   210,   211,   215,   216,   221,
+     222,   223,   224,   229,   230,   231,   232,   237,   238,   239,
+     240,   245,   246,   247,   248,   253,   254,   255,   256,   261,
+     262,   263,   264,   269,   270,   271,   277,   278,   279,   280,
+     281,   282,   283,   298,   299,   301,   302,   303,   308,   309,
+     310,   311,   319,   320,   321,   322,   323,   324,   337,   340,
+     342,   343,   344,   345,   353,   354,   359,   360,   361,   362,
+     363,   364,   365,   379,   380,   381,   382,   383,   384,   385,
+     403,   404,   405,   417,   418,   419,   420,   429,   430,   431,
+     435,   436,   437,   443,   444,   445,   451,   452,   453,   461,
+     462,   463,   468,   469,   470,   477,   478,   479,   483,   484,
+     485,   491,   492,   493,   497,   498,   501,   502,   503,   507,
+     508,   509,   513,   514,   515,   519,   520,   521,   525,   526,
+     527,   531,   532,   536,   537,   538,   545,   546,   552,   553,
+     554,   559,   560,   561,   565,   566,   567,   573,   574,   575,
+     576,   583,   584,   588,   589,   590,   591,   592,   601,   602,
+     603,   607,   608,   612,   613,   614,   621,   622,   623,   624,
+     634,   638
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
 static const yytype_int16 yyrhs[] =
 {
-      55,     0,    -1,    -1,   189,    -1,   175,    -1,   175,    55,
-      -1,   189,    55,    -1,    -1,    -1,    57,   136,    -1,   141,
-      -1,    -1,    58,   113,    -1,    -1,    59,   126,    -1,    -1,
-      60,   148,    -1,    39,    -1,    -1,    40,    63,    -1,    -1,
-      41,    64,    -1,    -1,    42,    65,    -1,    -1,    43,    66,
-      -1,    -1,    44,    67,    -1,    -1,    -1,    62,    45,    69,
-      70,    -1,    -1,    -1,    62,    45,     3,    80,    71,    72,
-      -1,    -1,    -1,    -1,    61,    62,    45,     3,    80,    73,
-      74,    75,    -1,    -1,    -1,    -1,    45,     3,    80,    77,
-      78,    79,    -1,   151,    -1,    24,   159,    -1,    -1,    99,
-      81,    -1,    -1,    46,    62,    47,    99,    82,    -1,    -1,
-      13,    99,    83,    -1,    -1,    80,    12,    80,    84,    -1,
-      -1,    80,    13,    80,    85,    -1,    -1,    80,    15,    80,
-      86,    -1,    -1,    80,    16,    80,    87,    -1,    -1,    80,
-      17,    80,    88,    -1,    -1,    80,     7,    80,    89,    -1,
-      -1,    80,     6,    80,    90,    -1,    -1,    80,     9,    80,
-      91,    -1,    -1,    80,    11,    80,    92,    -1,    -1,    80,
-      10,    80,    93,    -1,    -1,    80,     8,    80,    94,    -1,
-      -1,    80,     5,    80,    95,    -1,    -1,    80,     4,    80,
-      96,    -1,    -1,    14,    80,    97,    -1,    -1,    46,    80,
-      47,    98,    -1,    -1,    -1,    18,   100,   101,    -1,    -1,
-      -1,    19,   102,   103,    -1,    -1,    -1,    20,   104,   105,
-      -1,    -1,    -1,    21,   106,   107,    -1,    -1,    -1,    22,
-     108,   109,    -1,    -1,    -1,    45,   110,   111,    -1,    -1,
-      46,    99,    47,   112,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    28,    46,    80,   114,   115,    47,    48,   116,   117,
-     184,    49,   118,   119,   120,    -1,    -1,   121,    -1,    -1,
-      -1,    29,   122,   123,   113,    -1,    -1,    -1,    29,    48,
-     124,   184,    49,   125,    -1,    -1,    -1,    -1,    -1,    30,
-      46,    45,    47,   127,   128,    48,   129,   131,    49,   130,
-      -1,   131,   132,    -1,   132,    -1,    -1,    -1,    -1,    31,
-     133,    80,   134,    50,   135,    80,   175,    -1,    32,    50,
-     175,    -1,    -1,    -1,    -1,    -1,    33,    46,    80,    47,
-     137,   138,    48,   139,   184,    49,   140,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    34,    46,   142,    76,    51,   143,
-     144,    80,    51,   145,    76,    47,    48,   146,   184,    49,
-     147,    -1,    34,    46,    45,    50,    80,    13,    80,    47,
-      48,   184,    49,    -1,    34,    46,    45,    50,    80,    52,
-      80,    47,    48,   184,    49,    -1,    -1,    -1,    37,    48,
-     149,   184,    49,   150,    38,    46,    80,    47,    51,    -1,
-      -1,    -1,    24,    45,   152,   153,    48,   154,    49,    -1,
-      -1,    45,   155,    -1,    -1,    45,     3,    80,   156,    -1,
-      -1,    45,    53,   154,   157,    -1,    -1,    45,     3,    80,
-      53,   154,   158,    -1,    -1,    45,    45,   160,    -1,    -1,
-      45,    45,     3,    80,   161,    -1,    -1,    80,   163,    -1,
-      -1,   162,    53,    80,   164,    -1,    -1,    76,   166,    -1,
-      80,    -1,    -1,    68,   167,    -1,    -1,    27,   168,    -1,
-      -1,    35,   169,    -1,    -1,    36,   170,    -1,    -1,    23,
-     171,    -1,    -1,    23,    80,   172,    -1,    -1,    25,    46,
-      80,    47,   173,    -1,    -1,    25,    46,   162,    47,   174,
-      -1,    -1,   165,    51,   176,    -1,    -1,    56,   177,    -1,
-      -1,   175,   165,    51,   178,    -1,    -1,    -1,    48,   179,
-     184,    49,   180,    -1,   175,    56,    -1,    -1,    -1,    -1,
-     175,    48,   181,   184,    49,   182,   183,    -1,   175,    -1,
-      -1,    62,    45,   186,    -1,    -1,    -1,    62,    45,   187,
-     188,    53,   185,    -1,    -1,    -1,    -1,    62,    45,   190,
-     191,   192,   193,    48,   184,    49,    -1,    46,   185,    47,
-      -1,    46,    47,    -1
+      54,     0,    -1,    -1,    -1,   234,    55,    -1,    -1,   212,
+      56,    -1,    -1,   212,    54,    57,    -1,    -1,   234,    54,
+      58,    -1,    -1,    -1,    60,   154,    -1,   161,    -1,    -1,
+      61,   128,    -1,    -1,    62,   142,    -1,    -1,    63,   168,
+      -1,    -1,    39,    65,    -1,    -1,    40,    67,    -1,    -1,
+      41,    68,    -1,    -1,    42,    69,    -1,    -1,    43,    70,
+      -1,    -1,    -1,    44,    71,    72,    -1,    -1,    -1,    -1,
+      66,    45,    74,    75,    76,    -1,    -1,    -1,    -1,    66,
+      45,     3,    88,    77,    78,    79,    -1,    -1,    -1,    -1,
+      64,    66,    45,     3,    88,    80,    81,    82,    -1,    -1,
+      -1,    45,     3,    88,    84,    85,    -1,    -1,   171,    86,
+      -1,    -1,    24,   184,    87,    -1,    -1,   107,    89,    -1,
+      -1,    46,    66,    47,   107,    90,    -1,    -1,    13,   107,
+      91,    -1,    -1,    88,    12,    88,    92,    -1,    -1,    88,
+      13,    88,    93,    -1,    -1,    88,    15,    88,    94,    -1,
+      -1,    88,    16,    88,    95,    -1,    -1,    88,    17,    88,
+      96,    -1,    -1,    88,     7,    88,    97,    -1,    -1,    88,
+       6,    88,    98,    -1,    -1,    88,     9,    88,    99,    -1,
+      -1,    88,    11,    88,   100,    -1,    -1,    88,    10,    88,
+     101,    -1,    -1,    88,     8,    88,   102,    -1,    -1,    88,
+       5,    88,   103,    -1,    -1,    88,     4,    88,   104,    -1,
+      -1,    14,    88,   105,    -1,    -1,    46,    88,    47,   106,
+      -1,    -1,    -1,    -1,    18,   108,   109,   110,    -1,    -1,
+      -1,    -1,    19,   111,   112,   113,    -1,    -1,    -1,    -1,
+      20,   114,   115,   116,    -1,    -1,    -1,    -1,    21,   117,
+     118,   119,    -1,    -1,    -1,    -1,    22,   120,   121,   122,
+      -1,    -1,    -1,    -1,    45,   123,   124,   125,    -1,    -1,
+      -1,    46,   107,    47,   126,   127,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    28,    46,   129,    88,   130,   131,    47,
+      48,   132,   133,   227,    49,   134,   135,    -1,    -1,   136,
+      -1,    -1,    -1,    29,   137,   138,   128,    -1,    -1,    -1,
+      -1,    29,    48,   139,   140,   227,    49,   141,    -1,    -1,
+      -1,    -1,    -1,    -1,    30,    46,    45,   143,    47,   144,
+     145,    48,   146,   148,    49,   147,    -1,   148,   149,    -1,
+     149,    -1,    -1,    -1,    -1,    31,   150,    88,   151,    50,
+     152,   212,    -1,    -1,    32,    50,   153,   212,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    33,    46,    88,   155,    47,
+     156,   157,    48,   158,   227,    49,   159,   160,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    34,    46,   162,    73,    51,
+     163,   164,    88,    51,   165,    83,    47,    48,   166,   227,
+      49,   167,    -1,    -1,    -1,    37,    48,   169,   227,    49,
+     170,    38,    46,    88,    47,    51,    -1,    -1,    -1,    -1,
+      24,    45,   172,   173,    48,   175,    49,   174,    -1,    -1,
+      -1,    45,   176,   177,    -1,    -1,    -1,    45,     3,    88,
+     178,   179,    -1,    -1,    -1,    45,    52,   175,   180,   181,
+      -1,    -1,    -1,    45,     3,    88,    52,   175,   182,   183,
+      -1,    -1,    -1,    45,    45,   185,   186,    -1,    -1,    -1,
+      45,    45,     3,    88,   187,   188,    -1,    -1,    -1,    88,
+     190,   191,    -1,    -1,    -1,   189,    52,    88,   192,   193,
+      -1,    -1,    -1,    83,   195,   196,    -1,    -1,    88,   197,
+      -1,    -1,    -1,    73,   198,   199,    -1,    -1,    -1,    27,
+     200,   201,    -1,    -1,    -1,    35,   202,   203,    -1,    -1,
+      -1,    36,   204,   205,    -1,    -1,    -1,    23,   206,   207,
+      -1,    -1,    23,    88,   208,    -1,    -1,    -1,    25,    46,
+      88,    47,   209,   210,    -1,    -1,    25,    46,   189,    47,
+     211,    -1,    -1,    -1,   194,    51,   213,   214,    -1,    -1,
+      -1,    59,   215,   216,    -1,    -1,    -1,   212,   194,    51,
+     217,   218,    -1,    -1,    -1,    -1,    48,   219,   227,    49,
+     220,   221,    -1,    -1,   212,    59,   222,    -1,    -1,    -1,
+      -1,    -1,   212,    48,   223,   227,    49,   224,   225,   226,
+      -1,    -1,    -1,   212,   228,   229,    -1,    -1,    66,    45,
+     231,    -1,    -1,    -1,    66,    45,   232,   233,    52,   230,
+      -1,    -1,    -1,    -1,    66,    45,   235,   236,   237,   238,
+      48,   227,    49,    -1,    46,   230,    47,    -1,    46,    47,
+      -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   250,   250,   252,   253,   254,   255,   256,   260,   260,
-     261,   262,   262,   263,   263,   264,   264,   269,   271,   271,
-     272,   272,   273,   273,   274,   274,   275,   275,   278,   278,
-     278,   279,   279,   279,   280,   280,   280,   280,   285,   285,
-     285,   285,   286,   287,   292,   292,   293,   293,   294,   294,
-     295,   295,   296,   296,   297,   297,   298,   298,   299,   299,
-     300,   300,   301,   301,   302,   302,   303,   303,   304,   304,
-     305,   305,   306,   306,   307,   307,   308,   308,   309,   309,
-     313,   313,   313,   314,   314,   314,   315,   315,   315,   316,
-     316,   316,   317,   317,   317,   318,   318,   318,   319,   319,
-     328,   328,   328,   328,   328,   328,   328,   330,   330,   331,
-     331,   331,   332,   332,   332,   335,   335,   335,   335,   335,
-     337,   338,   341,   341,   341,   341,   342,   350,   350,   350,
-     350,   350,   353,   353,   353,   353,   353,   353,   353,   354,
-     355,   359,   359,   359,   365,   365,   365,   369,   369,   370,
-     370,   371,   371,   372,   372,   375,   375,   376,   376,   382,
-     382,   383,   383,   386,   386,   387,   388,   388,   389,   389,
-     390,   390,   391,   391,   392,   392,   393,   393,   394,   394,
-     395,   395,   400,   400,   401,   401,   402,   402,   403,   403,
-     403,   404,   405,   405,   405,   405,   410,   415,   415,   416,
-     416,   416,   421,   421,   422,   421,   424,   425
+       0,   305,   305,   307,   307,   308,   308,   309,   309,   310,
+     310,   311,   315,   315,   316,   317,   317,   318,   318,   319,
+     319,   324,   324,   326,   326,   327,   327,   328,   328,   329,
+     329,   330,   330,   330,   333,   333,   333,   333,   334,   334,
+     334,   334,   335,   335,   335,   335,   340,   340,   340,   341,
+     341,   342,   342,   347,   347,   348,   348,   349,   349,   350,
+     350,   351,   351,   352,   352,   353,   353,   354,   354,   355,
+     355,   356,   356,   357,   357,   358,   358,   359,   359,   360,
+     360,   361,   361,   362,   362,   363,   363,   364,   364,   368,
+     368,   368,   368,   370,   370,   370,   370,   371,   371,   371,
+     371,   372,   372,   372,   372,   373,   373,   373,   373,   374,
+     374,   374,   374,   375,   375,   375,   384,   384,   384,   384,
+     384,   384,   384,   386,   386,   387,   387,   387,   388,   388,
+     388,   388,   391,   391,   391,   391,   391,   391,   393,   394,
+     397,   397,   397,   397,   398,   398,   406,   406,   406,   406,
+     406,   406,   406,   409,   409,   409,   409,   409,   409,   409,
+     415,   415,   415,   421,   421,   421,   421,   425,   425,   425,
+     426,   426,   426,   427,   427,   427,   428,   428,   428,   431,
+     431,   431,   432,   432,   432,   438,   438,   438,   439,   439,
+     439,   442,   442,   442,   443,   443,   444,   444,   444,   445,
+     445,   445,   446,   446,   446,   447,   447,   447,   448,   448,
+     448,   449,   449,   450,   450,   450,   451,   451,   456,   456,
+     456,   457,   457,   457,   458,   458,   458,   459,   459,   459,
+     459,   460,   460,   461,   461,   461,   461,   461,   466,   466,
+     466,   471,   471,   472,   472,   472,   477,   477,   478,   477,
+     480,   481
 };
 #endif
 
@@ -742,30 +814,36 @@ static const char *const yytname[] =
 {
   "$end", "error", "$undefined", "'='", "OR", "AND", "NEQ", "EQ", "LEQ",
   "LT", "GEQ", "GT", "'+'", "'-'", "NOT", "'*'", "'/'", "'%'", "INTEGER",
-  "FLOAT_NUMBER", "STRING", "TRUE_VAL", "FALSE_VAL", "RETURN", "ENUM",
-  "PRINT", "ASSERT", "EXIT", "IF", "ELSE", "SWITCH", "CASE", "DEFAULT",
-  "WHILE", "FOR", "BREAK", "CONTINUE", "REPEAT", "UNTIL", "CONST",
-  "INT_DATA_TYPE", "FLOAT_DATA_TYPE", "STRING_DATA_TYPE", "BOOL_DATA_TYPE",
+  "FLOAT_", "STRING", "TRUE_VAL", "FALSE_VAL", "RETURN", "ENUM", "PRINT",
+  "ASSERT", "EXIT", "IF", "ELSE", "SWITCH", "CASE", "DEFAULT", "WHILE",
+  "FOR", "BREAK", "CONTINUE", "REPEAT", "UNTIL", "CONST", "INT_DATA_TYPE",
+  "FLOAT_DATA_TYPE", "STRING_DATA_TYPE", "BOOL_DATA_TYPE",
   "VOID_DATA_TYPE", "IDENTIFIER", "'('", "')'", "'{'", "'}'", "':'", "';'",
-  "'<'", "','", "$accept", "program", "controlStatement", "$@1", "$@2",
-  "$@3", "$@4", "dataModifier", "dataType", "$@5", "$@6", "$@7", "$@8",
-  "$@9", "decleration", "$@10", "$@11", "$@12", "$@13", "$@14", "$@15",
-  "$@16", "assignment", "$@17", "$@18", "$@19", "expr", "$@20", "$@21",
-  "$@22", "$@23", "$@24", "$@25", "$@26", "$@27", "$@28", "$@29", "$@30",
-  "$@31", "$@32", "$@33", "$@34", "$@35", "$@36", "$@37", "term", "$@38",
-  "$@39", "$@40", "$@41", "$@42", "$@43", "$@44", "$@45", "$@46", "$@47",
-  "$@48", "$@49", "$@50", "ifCondition", "$@51", "$@52", "$@53", "$@54",
-  "$@55", "$@56", "elseCondition", "$@57", "$@58", "$@59", "$@60", "$@61",
-  "switchCase", "$@62", "$@63", "$@64", "$@65", "caseList", "case", "$@66",
-  "$@67", "$@68", "while", "$@69", "$@70", "$@71", "$@72", "forLoop",
-  "$@73", "$@74", "$@75", "$@76", "$@77", "$@78", "repeatUntil", "$@79",
-  "$@80", "enumDef", "$@81", "$@82", "enumBody", "$@83", "$@84", "$@85",
-  "$@86", "enumDeclaration", "$@87", "$@88", "printList", "$@89", "$@90",
-  "statement", "$@91", "$@92", "$@93", "$@94", "$@95", "$@96", "$@97",
-  "$@98", "$@99", "statements", "$@100", "$@101", "$@102", "$@103",
-  "$@104", "$@105", "$@106", "$@107", "codeBlock", "functionArgs", "$@108",
-  "$@109", "$@110", "functionDefinition", "$@112", "$@113", "$@114",
-  "functionDefinitionAfter", 0
+  "','", "$accept", "program", "$@1", "$@2", "$@3", "$@4",
+  "controlStatement", "$@5", "$@6", "$@7", "$@8", "dataModifier", "$@9",
+  "dataType", "$@10", "$@11", "$@12", "$@13", "$@14", "$@15",
+  "decleration", "$@16", "$@17", "$@18", "$@19", "$@20", "$@21", "$@22",
+  "$@23", "$@24", "assignment", "$@25", "$@26", "$@27", "$@28", "expr",
+  "$@29", "$@30", "$@31", "$@32", "$@33", "$@34", "$@35", "$@36", "$@37",
+  "$@38", "$@39", "$@40", "$@41", "$@42", "$@43", "$@44", "$@45", "$@46",
+  "term", "$@47", "$@48", "$@49", "$@50", "$@51", "$@52", "$@53", "$@54",
+  "$@55", "$@56", "$@57", "$@58", "$@59", "$@60", "$@61", "$@62", "$@63",
+  "$@64", "$@65", "$@66", "ifCondition", "$@67", "$@68", "$@69", "$@70",
+  "$@71", "$@72", "elseCondition", "$@73", "$@74", "$@75", "$@76", "$@77",
+  "$@78", "switchCase", "$@79", "$@80", "$@81", "$@82", "$@83", "caseList",
+  "case", "$@84", "$@85", "$@86", "$@87", "while", "$@88", "$@89", "$@90",
+  "$@91", "$@92", "$@93", "forLoop", "$@94", "$@95", "$@96", "$@97",
+  "$@98", "$@99", "repeatUntil", "$@100", "$@101", "enumDefinition",
+  "$@102", "$@103", "$@104", "enumBody", "$@105", "$@106", "$@107",
+  "$@108", "$@109", "$@110", "$@111", "$@112", "enumDeclaration", "$@113",
+  "$@114", "$@115", "$@116", "printList", "$@117", "$@118", "$@119",
+  "$@120", "statement", "$@121", "$@122", "$@123", "$@124", "$@125",
+  "$@126", "$@127", "$@128", "$@129", "$@130", "$@131", "$@132", "$@133",
+  "$@134", "$@135", "$@136", "$@137", "stmts", "$@138", "$@139", "$@140",
+  "$@141", "$@142", "$@143", "$@144", "$@145", "$@146", "$@147", "$@148",
+  "$@149", "$@150", "$@151", "codeBlock", "$@152", "$@153", "functionArgs",
+  "$@154", "$@155", "$@156", "functionDefinition", "$@158", "$@159",
+  "$@160", "functionDefinitionAfter", 0
 };
 #endif
 
@@ -779,60 +857,70 @@ static const yytype_uint16 yytoknum[] =
      269,   270,   271,   272,   273,   274,   275,   276,   277,   278,
      279,   280,   281,   282,   283,   284,   285,   286,   287,   288,
      289,   290,   291,   292,   293,   294,    40,    41,   123,   125,
-      58,    59,    60,    44
+      58,    59,    44
 };
 # endif
 
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    54,    55,    55,    55,    55,    55,    55,    57,    56,
-      56,    58,    56,    59,    56,    60,    56,    61,    63,    62,
-      64,    62,    65,    62,    66,    62,    67,    62,    69,    70,
-      68,    71,    72,    68,    73,    74,    75,    68,    77,    78,
-      79,    76,    76,    76,    81,    80,    82,    80,    83,    80,
-      84,    80,    85,    80,    86,    80,    87,    80,    88,    80,
-      89,    80,    90,    80,    91,    80,    92,    80,    93,    80,
-      94,    80,    95,    80,    96,    80,    97,    80,    98,    80,
-     100,   101,    99,   102,   103,    99,   104,   105,    99,   106,
-     107,    99,   108,   109,    99,   110,   111,    99,   112,    99,
-     114,   115,   116,   117,   118,   119,   113,   121,   120,   122,
-     123,   120,   124,   125,   120,   127,   128,   129,   130,   126,
-     131,   131,   133,   134,   135,   132,   132,   137,   138,   139,
-     140,   136,   142,   143,   144,   145,   146,   147,   141,   141,
-     141,   149,   150,   148,   152,   153,   151,   155,   154,   156,
-     154,   157,   154,   158,   154,   160,   159,   161,   159,   163,
-     162,   164,   162,   166,   165,   165,   167,   165,   168,   165,
-     169,   165,   170,   165,   171,   165,   172,   165,   173,   165,
-     174,   165,   176,   175,   177,   175,   178,   175,   179,   180,
-     175,   175,   181,   182,   183,   175,   184,   186,   185,   187,
-     188,   185,   190,   191,   192,   189,   193,   193
+       0,    53,    54,    55,    54,    56,    54,    57,    54,    58,
+      54,    54,    60,    59,    59,    61,    59,    62,    59,    63,
+      59,    65,    64,    67,    66,    68,    66,    69,    66,    70,
+      66,    71,    72,    66,    74,    75,    76,    73,    77,    78,
+      79,    73,    80,    81,    82,    73,    84,    85,    83,    86,
+      83,    87,    83,    89,    88,    90,    88,    91,    88,    92,
+      88,    93,    88,    94,    88,    95,    88,    96,    88,    97,
+      88,    98,    88,    99,    88,   100,    88,   101,    88,   102,
+      88,   103,    88,   104,    88,   105,    88,   106,    88,   108,
+     109,   110,   107,   111,   112,   113,   107,   114,   115,   116,
+     107,   117,   118,   119,   107,   120,   121,   122,   107,   123,
+     124,   125,   107,   126,   127,   107,   129,   130,   131,   132,
+     133,   134,   128,   136,   135,   137,   138,   135,   139,   140,
+     141,   135,   143,   144,   145,   146,   147,   142,   148,   148,
+     150,   151,   152,   149,   153,   149,   155,   156,   157,   158,
+     159,   160,   154,   162,   163,   164,   165,   166,   167,   161,
+     169,   170,   168,   172,   173,   174,   171,   176,   177,   175,
+     178,   179,   175,   180,   181,   175,   182,   183,   175,   185,
+     186,   184,   187,   188,   184,   190,   191,   189,   192,   193,
+     189,   195,   196,   194,   197,   194,   198,   199,   194,   200,
+     201,   194,   202,   203,   194,   204,   205,   194,   206,   207,
+     194,   208,   194,   209,   210,   194,   211,   194,   213,   214,
+     212,   215,   216,   212,   217,   218,   212,   219,   220,   221,
+     212,   222,   212,   223,   224,   225,   226,   212,   228,   229,
+     227,   231,   230,   232,   233,   230,   235,   236,   237,   234,
+     238,   238
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
-       0,     2,     0,     1,     1,     2,     2,     0,     0,     2,
-       1,     0,     2,     0,     2,     0,     2,     1,     0,     2,
-       0,     2,     0,     2,     0,     2,     0,     2,     0,     0,
-       4,     0,     0,     6,     0,     0,     0,     8,     0,     0,
-       0,     6,     1,     2,     0,     2,     0,     5,     0,     3,
-       0,     4,     0,     4,     0,     4,     0,     4,     0,     4,
-       0,     4,     0,     4,     0,     4,     0,     4,     0,     4,
-       0,     4,     0,     4,     0,     4,     0,     3,     0,     4,
-       0,     0,     3,     0,     0,     3,     0,     0,     3,     0,
-       0,     3,     0,     0,     3,     0,     0,     3,     0,     4,
-       0,     0,     0,     0,     0,     0,    14,     0,     1,     0,
-       0,     4,     0,     0,     6,     0,     0,     0,     0,    11,
-       2,     1,     0,     0,     0,     8,     3,     0,     0,     0,
-       0,    11,     0,     0,     0,     0,     0,     0,    17,    11,
-      11,     0,     0,    11,     0,     0,     7,     0,     2,     0,
-       4,     0,     4,     0,     6,     0,     3,     0,     5,     0,
-       2,     0,     4,     0,     2,     1,     0,     2,     0,     2,
-       0,     2,     0,     2,     0,     2,     0,     3,     0,     5,
-       0,     5,     0,     3,     0,     2,     0,     4,     0,     0,
-       5,     2,     0,     0,     0,     7,     1,     0,     3,     0,
-       0,     6,     0,     0,     0,     9,     3,     2
+       0,     2,     0,     0,     2,     0,     2,     0,     3,     0,
+       3,     0,     0,     2,     1,     0,     2,     0,     2,     0,
+       2,     0,     2,     0,     2,     0,     2,     0,     2,     0,
+       2,     0,     0,     3,     0,     0,     0,     5,     0,     0,
+       0,     7,     0,     0,     0,     8,     0,     0,     5,     0,
+       2,     0,     3,     0,     2,     0,     5,     0,     3,     0,
+       4,     0,     4,     0,     4,     0,     4,     0,     4,     0,
+       4,     0,     4,     0,     4,     0,     4,     0,     4,     0,
+       4,     0,     4,     0,     4,     0,     3,     0,     4,     0,
+       0,     0,     4,     0,     0,     0,     4,     0,     0,     0,
+       4,     0,     0,     0,     4,     0,     0,     0,     4,     0,
+       0,     0,     4,     0,     0,     5,     0,     0,     0,     0,
+       0,     0,    14,     0,     1,     0,     0,     4,     0,     0,
+       0,     7,     0,     0,     0,     0,     0,    12,     2,     1,
+       0,     0,     0,     7,     0,     4,     0,     0,     0,     0,
+       0,     0,    13,     0,     0,     0,     0,     0,     0,    17,
+       0,     0,    11,     0,     0,     0,     8,     0,     0,     3,
+       0,     0,     5,     0,     0,     5,     0,     0,     7,     0,
+       0,     4,     0,     0,     6,     0,     0,     3,     0,     0,
+       5,     0,     0,     3,     0,     2,     0,     0,     3,     0,
+       0,     3,     0,     0,     3,     0,     0,     3,     0,     0,
+       3,     0,     3,     0,     0,     6,     0,     5,     0,     0,
+       4,     0,     0,     3,     0,     0,     5,     0,     0,     0,
+       6,     0,     3,     0,     0,     0,     0,     8,     0,     0,
+       3,     0,     3,     0,     0,     6,     0,     0,     0,     9,
+       3,     2
 };
 
 /* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
@@ -840,248 +928,244 @@ static const yytype_uint8 yyr2[] =
    means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       2,     0,     0,    80,    83,    86,    89,    92,   174,     0,
-       0,   168,     0,   170,   172,    17,    18,    20,    22,    24,
-      26,    95,     0,   188,     0,   184,     0,     0,     0,     0,
-       0,     0,   166,   163,   165,    44,    10,    42,     0,     2,
-       2,    95,     0,    48,    76,    81,    84,    87,    90,    93,
-     176,   175,   144,    43,     0,   169,   132,   171,   173,    19,
-      21,    23,    25,    27,     0,    96,     0,     0,    44,     8,
-       1,   185,     0,     9,     0,    12,     0,    14,     0,    16,
-       0,    28,   167,   164,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,    45,   182,   188,
-       5,   184,     0,     6,     0,    49,    77,    82,    85,    88,
-      91,    94,   177,   155,   145,   159,     0,     0,     0,    38,
-      97,     0,    78,    98,     0,     8,     0,     0,     0,     0,
-     141,     0,     0,    29,   203,    74,    72,    62,    60,    70,
-      64,    68,    66,    50,    52,    54,    56,    58,   183,     8,
-     182,     0,   156,     0,   178,   160,   180,     0,     0,     0,
-       0,    39,    46,    79,    99,    28,   192,   191,     0,   189,
-       0,   100,     0,     8,     0,    31,    30,   204,    75,    73,
-      63,    61,    71,    65,    69,    67,    51,    53,    55,    57,
-      59,     0,   187,   157,     0,   179,   181,   161,     0,   133,
-      40,    47,   186,   190,   127,   101,   115,     0,    34,    32,
-       0,   193,   158,   147,     0,   162,     0,     0,   134,    41,
-     128,     0,   116,   142,    35,    33,     0,     0,   194,     0,
-       0,   148,   146,    52,     0,     0,     0,     0,     0,     0,
-      36,   207,     0,     0,     8,   195,   149,   151,     0,     0,
-       0,   129,   102,   117,     0,    37,   197,   206,     0,     0,
-     150,   152,     8,     8,   135,     8,   103,     0,     0,   198,
-     200,   205,   153,     0,     0,     0,     0,     8,   122,     0,
-       0,   121,     0,     0,   154,   139,   140,     0,   130,     0,
-       0,     8,   118,   120,     0,     0,     0,   131,   104,   123,
-     126,   119,   143,   201,   136,   105,     0,     8,   107,   124,
-       0,   109,   106,   108,     0,   137,   112,   110,     8,   138,
-       8,     0,     0,   125,     0,   111,    44,   113,   114
+       2,     0,     0,    89,    93,    97,   101,   105,   208,     0,
+       0,   199,     0,   202,   205,    21,    23,    25,    27,    29,
+      31,   109,     0,   227,     0,   221,     0,     0,     0,     0,
+       0,     0,   196,   191,   194,    53,    14,    49,     0,     2,
+       2,   109,     0,    57,    85,    90,    94,    98,   102,   106,
+     211,   209,   163,    51,     0,   200,   153,   203,   206,    22,
+      24,    26,    28,    30,    32,     0,   110,     0,     0,    53,
+      12,     1,   222,     0,    13,     0,    16,     0,    18,     0,
+      20,     0,    34,   197,   192,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,   195,    54,
+      50,   218,   227,     7,     6,   221,     0,     9,     4,     0,
+      58,    86,    91,    95,    99,   103,   107,   212,   210,   179,
+     164,    52,   185,     0,   201,     0,   204,   207,    33,    46,
+     111,     0,    87,   113,     0,    12,     0,   223,     0,   116,
+       0,   160,     0,     0,    35,   247,   198,   193,    83,    81,
+      71,    69,    79,    73,    77,    75,    59,    61,    63,    65,
+      67,   219,    12,     8,   232,   218,    10,    92,    96,   100,
+     104,   108,     0,   180,     0,   213,   186,   216,     0,     0,
+      47,   112,    55,    88,   114,    34,   233,   231,     0,   239,
+     228,   146,     0,   132,    12,     0,    38,    36,   248,    84,
+      82,    72,    70,    80,    74,    78,    76,    60,    62,    64,
+      66,    68,   220,     0,   225,   182,   181,     0,   214,   187,
+     217,   188,   154,    48,    56,   115,   224,   240,   229,     0,
+     117,     0,     0,    42,    39,    37,     0,   234,   226,   183,
+     167,     0,   215,   189,   155,   230,   147,   118,   133,   161,
+      43,    40,     0,     0,   235,   184,     0,     0,   168,   165,
+     190,     0,   148,     0,   134,     0,    44,    41,   251,     0,
+       0,    12,   236,   170,   173,   169,   166,     0,     0,     0,
+       0,     0,    45,   241,   250,     0,   237,     0,   171,   174,
+     156,   149,   119,   135,     0,   242,   244,   249,   176,   172,
+     175,     0,    12,   120,     0,     0,     0,   177,     0,     0,
+       0,    12,   140,     0,     0,   139,     0,     0,   178,     0,
+     150,     0,     0,   144,   136,   138,   162,   245,   157,   151,
+     121,   141,    12,   137,    12,   152,   123,     0,   145,     0,
+     125,   122,   124,   142,   158,   128,   126,    12,   159,   129,
+       0,   143,    12,   127,     0,   130,   131
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
-      -1,    24,    25,    26,    27,    28,    29,    30,   124,    59,
-      60,    61,    62,    63,    32,   133,   176,   209,   225,   224,
-     240,   255,    33,   161,   200,   219,    34,    97,   201,   105,
-     186,   187,   188,   189,   190,   181,   180,   183,   185,   184,
-     182,   179,   178,   106,   163,    35,    45,   107,    46,   108,
-      47,   109,    48,   110,    49,   111,    65,   120,   164,    75,
-     205,   221,   266,   277,   305,   308,   312,   313,   317,   321,
-     320,   328,    77,   222,   238,   267,   301,   280,   281,   290,
-     306,   314,    73,   220,   236,   265,   297,    36,   118,   218,
-     235,   275,   307,   319,    79,   173,   239,    37,   114,   153,
-     214,   231,   260,   261,   284,    53,   152,   212,   116,   155,
-     215,    38,    83,    82,    55,    57,    58,    51,   112,   195,
-     196,   125,   148,    71,   192,    69,   203,   149,   228,   245,
-     126,   243,   269,   270,   283,    40,   134,   177,   210,   227
+      -1,    24,   108,   104,   163,   166,    25,    26,    27,    28,
+      29,    30,    59,   134,    60,    61,    62,    63,    64,   128,
+      32,   144,   197,   235,   234,   251,   267,   250,   266,   282,
+      33,   180,   223,   100,   121,    34,    99,   224,   110,   207,
+     208,   209,   210,   211,   202,   201,   204,   206,   205,   203,
+     200,   199,   111,   183,    35,    45,   112,   167,    46,   113,
+     168,    47,   114,   169,    48,   115,   170,    49,   116,   171,
+      66,   130,   181,   184,   225,    76,   192,   247,   263,   303,
+     311,   336,   341,   342,   346,   350,   349,   352,   356,    78,
+     231,   264,   280,   304,   333,   314,   315,   322,   337,   347,
+     332,    74,   229,   262,   278,   302,   329,   335,    36,   125,
+     244,   261,   301,   334,   348,    80,   194,   265,    37,   120,
+     174,   276,   241,   258,   275,   288,   299,   289,   300,   307,
+     318,    53,   173,   216,   239,   255,   123,   176,   219,   243,
+     260,    38,    84,   147,    98,    83,   146,    55,   124,    57,
+     126,    58,   127,    51,   118,   117,   218,   242,   220,   135,
+     161,   212,    72,   137,   214,   238,    70,   228,   245,   164,
+     162,   254,   272,   286,   136,   189,   227,   270,   295,   296,
+     306,    40,   145,   198,   236,   253
 };
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
-#define YYPACT_NINF -221
+#define YYPACT_NINF -243
 static const yytype_int16 yypact[] =
 {
-     428,    -3,    88,  -221,  -221,  -221,  -221,  -221,    88,   -17,
-     -34,  -221,   -16,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,    28,   164,  -221,    32,  -221,     1,    10,    18,    13,
-      39,    -5,  -221,  -221,   248,  -221,  -221,  -221,     9,   464,
-     428,  -221,    -3,  -221,   248,  -221,  -221,  -221,  -221,  -221,
-     248,  -221,    16,  -221,    88,  -221,    30,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,    88,  -221,    51,   215,    53,   536,
-    -221,  -221,     6,  -221,    17,  -221,    57,  -221,    63,  -221,
-      60,     3,  -221,  -221,    88,    88,    88,    88,    88,    88,
-      88,    88,    88,    88,    88,    88,    88,  -221,  -221,  -221,
-    -221,  -221,    62,  -221,    53,  -221,  -221,  -221,  -221,  -221,
-    -221,  -221,  -221,   109,  -221,   234,   -33,    65,   -20,   248,
-    -221,    -3,  -221,  -221,    71,   264,    68,    88,    88,    73,
-    -221,   116,    88,  -221,  -221,   248,   248,   248,   248,   248,
-     248,   248,   248,   248,   248,   248,   248,   248,  -221,   536,
-    -221,    88,  -221,    76,  -221,  -221,  -221,    88,    88,    28,
-      70,  -221,  -221,  -221,  -221,   123,  -221,  -221,    78,  -221,
-     365,   248,    83,   536,    88,   248,  -221,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,    82,  -221,   248,    90,  -221,  -221,   248,   137,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,    87,   248,  -221,
-      92,  -221,  -221,    -2,    91,  -221,    88,    88,  -221,  -221,
-    -221,   108,  -221,  -221,  -221,  -221,    15,   111,  -221,    88,
-      90,  -221,  -221,   379,   393,    88,   113,   114,   115,   101,
-    -221,  -221,   119,   118,   536,  -221,    61,  -221,   120,   121,
-     186,  -221,  -221,  -221,   110,  -221,   117,  -221,   122,    90,
-    -221,  -221,   536,   536,  -221,   536,  -221,    -8,    88,  -221,
-    -221,  -221,  -221,   124,   126,   -20,   127,   536,  -221,   129,
-       4,  -221,   412,   128,  -221,  -221,  -221,   125,  -221,   138,
-      88,   536,  -221,  -221,   149,    39,   140,  -221,  -221,   248,
-     500,  -221,  -221,  -221,  -221,  -221,   161,   536,   183,  -221,
-     165,   167,  -221,  -221,    88,  -221,  -221,  -221,   320,  -221,
-     536,    10,    88,   500,   169,  -221,   162,  -221,  -221
+     244,     9,    -2,  -243,  -243,  -243,  -243,  -243,    -2,   -31,
+     -21,  -243,   -13,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,    34,   139,  -243,    10,  -243,    23,    31,    45,    43,
+       7,    15,  -243,  -243,   469,  -243,  -243,  -243,    32,   352,
+     244,  -243,     9,  -243,   469,  -243,  -243,  -243,  -243,  -243,
+     469,  -243,    36,  -243,    -2,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,    -2,  -243,    35,   193,    50,
+     424,  -243,  -243,    52,  -243,    55,  -243,    64,  -243,    59,
+    -243,    63,     6,  -243,  -243,    -2,    -2,    -2,    -2,    -2,
+      -2,    -2,    -2,    -2,    -2,    -2,    -2,    -2,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,    60,  -243,  -243,    50,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,   109,
+    -243,  -243,   209,    11,  -243,   125,  -243,  -243,  -243,   469,
+    -243,     9,  -243,  -243,    69,   315,    77,  -243,    -2,  -243,
+      85,  -243,   128,    -2,  -243,  -243,  -243,  -243,   469,   469,
+     469,   469,   469,   469,   469,   469,   469,   469,   469,   469,
+     469,  -243,   424,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,    -2,  -243,    84,  -243,  -243,  -243,    -2,    82,
+    -243,  -243,  -243,  -243,  -243,   131,  -243,  -243,    87,  -243,
+    -243,   469,    -2,  -243,   424,    -2,   469,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,    90,  -243,   469,  -243,    91,  -243,  -243,
+    -243,   469,  -243,  -243,  -243,  -243,  -243,  -243,  -243,    93,
+     469,    94,    95,   469,  -243,  -243,    97,  -243,  -243,  -243,
+       5,    96,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,    62,    99,  -243,  -243,    -2,    91,  -243,  -243,
+    -243,    -2,  -243,   101,  -243,   111,  -243,  -243,  -243,   105,
+     104,   424,  -243,    61,  -243,  -243,  -243,   112,   106,   108,
+     114,   124,  -243,   120,  -243,   126,  -243,    91,  -243,  -243,
+    -243,  -243,  -243,  -243,    -2,  -243,  -243,  -243,  -243,  -243,
+    -243,   -11,   424,  -243,    -9,   226,   121,  -243,    34,   127,
+     137,   424,  -243,   138,    30,  -243,   136,     7,  -243,   141,
+    -243,   143,    -2,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,   469,   424,  -243,   424,  -243,   147,   140,   388,   144,
+     159,  -243,  -243,  -243,  -243,  -243,  -243,   424,  -243,  -243,
+      31,   388,   424,  -243,   146,  -243,  -243
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-    -221,   -13,   -28,  -221,  -221,  -221,  -221,  -221,     7,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,  -221,  -115,  -221,  -221,  -221,     0,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,  -221,    -1,  -221,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -155,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,   -46,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -220,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,   -26,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -221,     5,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221,
-    -140,   -59,  -221,  -221,  -221,  -221,  -221,  -221,  -221,  -221
+    -243,    -4,  -243,  -243,  -243,  -243,   -36,  -243,  -243,  -243,
+    -243,  -243,  -243,     2,  -243,  -243,  -243,  -243,  -243,  -243,
+      86,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+     -89,  -243,  -243,  -243,  -243,    -1,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,     4,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -127,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,   -87,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -242,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,   -35,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,     0,
+    -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,  -243,
+    -243,  -243,  -243,  -243,  -156,  -243,  -243,   -88,  -243,  -243,
+    -243,  -243,  -243,  -243,  -243,  -243
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]].  What to do in state STATE-NUM.  If
    positive, shift that token.  If negative, reduce the rule which
    number is the opposite.  If zero, do what YYDEFACT says.
    If YYTABLE_NINF, syntax error.  */
-#define YYTABLE_NINF -203
+#define YYTABLE_NINF -247
 static const yytype_int16 yytable[] =
 {
-      43,   229,    44,   160,     9,    39,   132,    31,    50,   191,
-     247,   101,    54,   102,   156,     3,     4,     5,     6,     7,
-     157,    68,    67,   278,   279,   159,   100,   103,    52,    66,
-      56,    64,    70,   207,    72,   278,   279,    80,    74,   272,
-      81,   104,    41,    42,    39,    39,    31,    31,    76,  -202,
-      78,   230,   127,   292,   115,    16,    17,    18,    19,    20,
-      98,   113,   241,   128,   119,    84,    85,    86,    87,    88,
-      89,    90,    91,    92,    93,   117,    94,    95,    96,    16,
-      17,    18,    19,    20,   135,   136,   137,   138,   139,   140,
-     141,   142,   143,   144,   145,   146,   147,   167,   121,   168,
-     123,     1,     2,   129,   258,   131,     3,     4,     5,     6,
-       7,   130,   151,   150,   259,   158,   165,   169,   172,   174,
-     162,   199,   273,   274,   194,   276,   132,   170,   171,   202,
-     206,   211,   175,    41,    22,   213,   223,   289,   226,   254,
-     232,    84,    85,    86,    87,    88,    89,    90,    91,    92,
-     216,   193,    94,    95,    96,   237,   268,   197,   198,   244,
-     287,   251,   252,   253,   256,   257,   325,   310,   262,   263,
-    -199,   271,   296,   285,   208,   286,   288,     1,     2,   291,
-     324,   295,     3,     4,     5,     6,     7,   298,   304,   217,
-      84,    85,    86,    87,    88,    89,    90,    91,    92,    93,
-     302,    94,    95,    96,    16,    17,    18,    19,    20,    41,
-      22,   309,   311,   -48,   315,   316,   233,   234,   327,    84,
-      85,    86,    87,    88,    89,    90,    91,    92,    93,   246,
-      94,    95,    96,   242,   293,   250,   303,   264,    84,    85,
-      86,    87,    88,    89,    90,    91,    92,    93,     0,    94,
-      95,    96,    84,    85,    86,    87,    88,    89,    90,    91,
-      92,    93,   122,    94,    95,    96,     0,     0,   282,     0,
-       0,     0,   167,     0,   168,     0,     0,     1,     2,     0,
-       0,   154,     3,     4,     5,     6,     7,     8,     9,    10,
-     299,    11,   -11,     0,   -13,   167,   300,   168,    12,    13,
-      14,   -15,   242,    15,    16,    17,    18,    19,    20,    21,
-      22,     0,   166,  -196,   318,     0,     0,     0,     0,     0,
-       0,   326,   144,   323,    84,    85,    86,    87,    88,    89,
-      90,    91,    92,   322,     2,    94,    95,    96,     3,     4,
-       5,     6,     7,     8,     9,    10,     0,    11,   -11,     0,
-     -13,     0,     0,     0,    12,    13,    14,   -15,     0,    15,
-      16,    17,    18,    19,    20,    21,    22,     0,    23,    84,
-      85,    86,    87,    88,    89,    90,    91,    92,    93,     0,
-      94,    95,    96,    84,    85,    86,    87,    88,    89,    90,
-      91,    92,    93,     0,    94,    95,    96,    84,    85,    86,
-      87,    88,    89,    90,    91,    92,    93,     0,    94,    95,
-      96,     0,   204,     0,     0,     0,    84,    85,    86,    87,
-      88,    89,    90,    91,    92,    93,   248,    94,    95,    96,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     249,     1,     2,     0,     0,     0,     3,     4,     5,     6,
-       7,     8,     9,    10,     0,    11,   -11,     0,   -13,   294,
-       0,    -8,    12,    13,    14,   -15,     0,    15,    16,    17,
-      18,    19,    20,    21,    22,     0,    23,     1,     2,     0,
+      39,    44,    31,   105,   106,    43,   213,    50,   256,   143,
+      71,     1,     2,     9,    52,   274,     3,     4,     5,     6,
+       7,    68,   312,   313,    67,    54,    69,     3,     4,     5,
+       6,     7,    81,    56,   308,   103,   107,    65,   232,    39,
+      39,    31,    31,    41,    22,   298,   109,    16,    17,    18,
+      19,    20,  -246,   122,    41,    42,    73,   257,   177,    75,
+      82,   312,   313,   178,   129,    85,    86,    87,    88,    89,
+      90,    91,    92,    93,    94,    77,    95,    96,    97,   324,
+      79,   119,   131,   101,   148,   149,   150,   151,   152,   153,
+     154,   155,   156,   157,   158,   159,   160,   133,   138,   187,
+     188,   139,    16,    17,    18,    19,    20,   141,   142,   268,
+     140,   165,   172,   287,   185,   285,    85,    86,    87,    88,
+      89,    90,    91,    92,    93,    94,   190,    95,    96,    97,
+     193,   195,   217,   222,   143,   182,   240,   191,   226,   237,
+     246,   248,   196,   252,   249,   259,   310,   271,   279,   281,
+     283,   284,     1,     2,   291,   321,   292,     3,     4,     5,
+       6,     7,   293,   290,    15,    16,    17,    18,    19,    20,
+     294,   215,  -243,   317,   319,   297,   340,   221,   339,    16,
+      17,    18,    19,    20,    41,    22,   320,   326,   323,   328,
+     343,   230,   330,   344,   233,   355,   354,    85,    86,    87,
+      88,    89,    90,    91,    92,    93,    94,   345,    95,    96,
+      97,   179,   309,    85,    86,    87,    88,    89,    90,    91,
+      92,    93,    94,   353,    95,    96,    97,   325,     0,   327,
+      85,    86,    87,    88,    89,    90,    91,    92,    93,    94,
+     132,    95,    96,    97,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,   269,   273,   175,     1,     2,     0,
+     277,     0,     3,     4,     5,     6,     7,     8,     9,    10,
+       0,    11,   -15,   316,   -17,     0,     0,   -12,    12,    13,
+      14,   -19,     0,    15,    16,    17,    18,    19,    20,    21,
+      22,     0,    23,   305,     0,     0,     0,     0,     0,     0,
+       0,     0,   187,   188,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,   187,   188,     0,     0,   269,
+       0,   331,     0,     0,     0,     0,     0,     0,     1,     2,
+       0,     0,   338,     3,     4,     5,     6,     7,     8,     9,
+      10,     0,    11,   -15,     0,   -17,     0,   351,     0,    12,
+      13,    14,   -19,     0,    15,    16,    17,    18,    19,    20,
+      21,    22,     0,   186,  -238,     1,     2,     0,     0,     0,
+       3,     4,     5,     6,     7,     8,     9,    10,     0,    11,
+     -15,     0,   -17,     0,     0,   -12,    12,    13,    14,   -19,
+       0,    15,    16,    17,    18,    19,    20,    21,    22,     0,
+     102,     1,     2,     0,     0,     0,     3,     4,     5,     6,
+       7,     8,     9,    10,     0,    11,   -15,     0,   -17,     0,
+       0,   -12,    12,    13,    14,   -19,     0,    15,    16,    17,
+      18,    19,    20,    21,    22,     0,   186,     1,     2,     0,
        0,     0,     3,     4,     5,     6,     7,     8,     9,    10,
-       0,    11,   -11,     0,   -13,     0,     0,    -8,    12,    13,
-      14,   -15,     0,    15,    16,    17,    18,    19,    20,    21,
-      22,     0,    99,     1,     2,     0,     0,     0,     3,     4,
-       5,     6,     7,     8,     9,    10,     0,    11,   -11,     0,
-     -13,     0,     0,    -8,    12,    13,    14,   -15,     0,    15,
-      16,    17,    18,    19,    20,    21,    22,     0,   166,     1,
-       2,     0,     0,     0,     3,     4,     5,     6,     7,     8,
-       9,    10,     0,    11,   -11,     0,   -13,     0,     0,     0,
-      12,    13,    14,   -15,     0,    15,    16,    17,    18,    19,
-      20,    21,    22,     0,    23
+       0,    11,   -15,     0,   -17,     0,     0,     0,    12,    13,
+      14,   -19,     0,    15,    16,    17,    18,    19,    20,    21,
+      22,     0,    23,    85,    86,    87,    88,    89,    90,    91,
+      92,    93,    94,     0,    95,    96,    97
 };
 
 static const yytype_int16 yycheck[] =
 {
-       1,     3,     2,   118,    24,     0,     3,     0,     8,   149,
-     230,    39,    46,    39,    47,    18,    19,    20,    21,    22,
-      53,    22,    22,    31,    32,    45,    39,    40,    45,    22,
-      46,     3,     0,   173,    33,    31,    32,    30,    28,   259,
-      45,    42,    45,    46,    39,    40,    39,    40,    30,    46,
-      37,    53,    46,    49,    54,    40,    41,    42,    43,    44,
-      51,    45,    47,    46,    64,     4,     5,     6,     7,     8,
-       9,    10,    11,    12,    13,    45,    15,    16,    17,    40,
-      41,    42,    43,    44,    84,    85,    86,    87,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,   125,    47,   125,
-      47,    13,    14,    46,   244,    45,    18,    19,    20,    21,
-      22,    48,     3,    51,    53,    50,    45,    49,    45,     3,
-     121,    51,   262,   263,    48,   265,     3,   127,   128,    51,
-      47,    49,   132,    45,    46,    45,    49,   277,    46,    38,
-      49,     4,     5,     6,     7,     8,     9,    10,    11,    12,
-      13,   151,    15,    16,    17,    47,    46,   157,   158,    48,
-     275,    48,    48,    48,    45,    47,   321,   307,    48,    48,
-      53,    49,    47,    49,   174,    49,    49,    13,    14,    50,
-     320,    53,    18,    19,    20,    21,    22,    49,    48,    52,
+       0,     2,     0,    39,    39,     1,   162,     8,     3,     3,
+       0,    13,    14,    24,    45,   257,    18,    19,    20,    21,
+      22,    22,    31,    32,    22,    46,    22,    18,    19,    20,
+      21,    22,    30,    46,    45,    39,    40,     3,   194,    39,
+      40,    39,    40,    45,    46,   287,    42,    40,    41,    42,
+      43,    44,    46,    54,    45,    46,    33,    52,    47,    28,
+      45,    31,    32,    52,    65,     4,     5,     6,     7,     8,
+       9,    10,    11,    12,    13,    30,    15,    16,    17,    49,
+      37,    45,    47,    51,    85,    86,    87,    88,    89,    90,
+      91,    92,    93,    94,    95,    96,    97,    47,    46,   135,
+     135,    46,    40,    41,    42,    43,    44,    48,    45,    47,
+      46,    51,     3,    52,    45,   271,     4,     5,     6,     7,
+       8,     9,    10,    11,    12,    13,    49,    15,    16,    17,
+      45,     3,    48,    51,     3,   131,    45,   138,    51,    49,
+      47,    47,   143,    46,    49,    49,   302,    48,    47,    38,
+      45,    47,    13,    14,    48,   311,    48,    18,    19,    20,
+      21,    22,    48,    51,    39,    40,    41,    42,    43,    44,
+      46,   172,    52,    52,    47,    49,    29,   178,   334,    40,
+      41,    42,    43,    44,    45,    46,    49,    51,    50,    48,
+      50,   192,    49,    49,   195,    49,   352,     4,     5,     6,
+       7,     8,     9,    10,    11,    12,    13,    48,    15,    16,
+      17,   125,   301,     4,     5,     6,     7,     8,     9,    10,
+      11,    12,    13,   350,    15,    16,    17,   314,    -1,   317,
        4,     5,     6,     7,     8,     9,    10,    11,    12,    13,
-      51,    15,    16,    17,    40,    41,    42,    43,    44,    45,
-      46,    50,    29,    51,    49,    48,   216,   217,    49,     4,
-       5,     6,     7,     8,     9,    10,    11,    12,    13,   229,
-      15,    16,    17,   226,   280,   235,   295,    51,     4,     5,
-       6,     7,     8,     9,    10,    11,    12,    13,    -1,    15,
-      16,    17,     4,     5,     6,     7,     8,     9,    10,    11,
-      12,    13,    47,    15,    16,    17,    -1,    -1,   268,    -1,
-      -1,    -1,   300,    -1,   300,    -1,    -1,    13,    14,    -1,
-      -1,    47,    18,    19,    20,    21,    22,    23,    24,    25,
-     290,    27,    28,    -1,    30,   323,   291,   323,    34,    35,
-      36,    37,   295,    39,    40,    41,    42,    43,    44,    45,
-      46,    -1,    48,    49,   314,    -1,    -1,    -1,    -1,    -1,
-      -1,   322,   322,   318,     4,     5,     6,     7,     8,     9,
-      10,    11,    12,    13,    14,    15,    16,    17,    18,    19,
-      20,    21,    22,    23,    24,    25,    -1,    27,    28,    -1,
-      30,    -1,    -1,    -1,    34,    35,    36,    37,    -1,    39,
-      40,    41,    42,    43,    44,    45,    46,    -1,    48,     4,
-       5,     6,     7,     8,     9,    10,    11,    12,    13,    -1,
-      15,    16,    17,     4,     5,     6,     7,     8,     9,    10,
-      11,    12,    13,    -1,    15,    16,    17,     4,     5,     6,
-       7,     8,     9,    10,    11,    12,    13,    -1,    15,    16,
-      17,    -1,    47,    -1,    -1,    -1,     4,     5,     6,     7,
-       8,     9,    10,    11,    12,    13,    47,    15,    16,    17,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      47,    13,    14,    -1,    -1,    -1,    18,    19,    20,    21,
-      22,    23,    24,    25,    -1,    27,    28,    -1,    30,    47,
+      47,    15,    16,    17,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,   252,   256,    47,    13,    14,    -1,
+     261,    -1,    18,    19,    20,    21,    22,    23,    24,    25,
+      -1,    27,    28,    47,    30,    -1,    -1,    33,    34,    35,
+      36,    37,    -1,    39,    40,    41,    42,    43,    44,    45,
+      46,    -1,    48,   294,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,   338,   338,    -1,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,   351,   351,    -1,    -1,   317,
+      -1,   322,    -1,    -1,    -1,    -1,    -1,    -1,    13,    14,
+      -1,    -1,   332,    18,    19,    20,    21,    22,    23,    24,
+      25,    -1,    27,    28,    -1,    30,    -1,   347,    -1,    34,
+      35,    36,    37,    -1,    39,    40,    41,    42,    43,    44,
+      45,    46,    -1,    48,    49,    13,    14,    -1,    -1,    -1,
+      18,    19,    20,    21,    22,    23,    24,    25,    -1,    27,
+      28,    -1,    30,    -1,    -1,    33,    34,    35,    36,    37,
+      -1,    39,    40,    41,    42,    43,    44,    45,    46,    -1,
+      48,    13,    14,    -1,    -1,    -1,    18,    19,    20,    21,
+      22,    23,    24,    25,    -1,    27,    28,    -1,    30,    -1,
       -1,    33,    34,    35,    36,    37,    -1,    39,    40,    41,
       42,    43,    44,    45,    46,    -1,    48,    13,    14,    -1,
       -1,    -1,    18,    19,    20,    21,    22,    23,    24,    25,
-      -1,    27,    28,    -1,    30,    -1,    -1,    33,    34,    35,
+      -1,    27,    28,    -1,    30,    -1,    -1,    -1,    34,    35,
       36,    37,    -1,    39,    40,    41,    42,    43,    44,    45,
-      46,    -1,    48,    13,    14,    -1,    -1,    -1,    18,    19,
-      20,    21,    22,    23,    24,    25,    -1,    27,    28,    -1,
-      30,    -1,    -1,    33,    34,    35,    36,    37,    -1,    39,
-      40,    41,    42,    43,    44,    45,    46,    -1,    48,    13,
-      14,    -1,    -1,    -1,    18,    19,    20,    21,    22,    23,
-      24,    25,    -1,    27,    28,    -1,    30,    -1,    -1,    -1,
-      34,    35,    36,    37,    -1,    39,    40,    41,    42,    43,
-      44,    45,    46,    -1,    48
+      46,    -1,    48,     4,     5,     6,     7,     8,     9,    10,
+      11,    12,    13,    -1,    15,    16,    17
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -1090,37 +1174,40 @@ static const yytype_uint8 yystos[] =
 {
        0,    13,    14,    18,    19,    20,    21,    22,    23,    24,
       25,    27,    34,    35,    36,    39,    40,    41,    42,    43,
-      44,    45,    46,    48,    55,    56,    57,    58,    59,    60,
-      61,    62,    68,    76,    80,    99,   141,   151,   165,   175,
-     189,    45,    46,    99,    80,   100,   102,   104,   106,   108,
-      80,   171,    45,   159,    46,   168,    46,   169,   170,    63,
-      64,    65,    66,    67,     3,   110,    62,    80,    99,   179,
-       0,   177,    33,   136,    28,   113,    30,   126,    37,   148,
-      62,    45,   167,   166,     4,     5,     6,     7,     8,     9,
-      10,    11,    12,    13,    15,    16,    17,    81,    51,    48,
-      55,    56,   165,    55,    99,    83,    97,   101,   103,   105,
-     107,   109,   172,    45,   152,    80,   162,    45,   142,    80,
-     111,    47,    47,    47,    62,   175,   184,    46,    46,    46,
-      48,    45,     3,    69,   190,    80,    80,    80,    80,    80,
-      80,    80,    80,    80,    80,    80,    80,    80,   176,   181,
-      51,     3,   160,   153,    47,   163,    47,    53,    50,    45,
-      76,    77,    99,    98,   112,    45,    48,    56,   165,    49,
-      80,    80,    45,   149,     3,    80,    70,   191,    96,    95,
-      90,    89,    94,    91,    93,    92,    84,    85,    86,    87,
-      88,   184,   178,    80,    48,   173,   174,    80,    80,    51,
-      78,    82,    51,   180,    47,   114,    47,   184,    80,    71,
-     192,    49,   161,    45,   154,   164,    13,    52,   143,    79,
-     137,   115,   127,    49,    73,    72,    46,   193,   182,     3,
-      53,   155,    49,    80,    80,   144,   138,    47,   128,   150,
-      74,    47,    62,   185,    48,   183,    80,   154,    47,    47,
-      80,    48,    48,    48,    38,    75,    45,    47,   184,    53,
-     156,   157,    48,    48,    51,   139,   116,   129,    46,   186,
-     187,    49,   154,   184,   184,   145,   184,   117,    31,    32,
-     131,   132,    80,   188,   158,    49,    49,    76,    49,   184,
-     133,    50,    49,   132,    47,    53,    47,   140,    49,    80,
-     175,   130,    51,   185,    48,   118,   134,   146,   119,    50,
-     184,    29,   120,   121,   135,    49,    48,   122,    80,   147,
-     124,   123,    13,   175,   184,   113,    99,    49,   125
+      44,    45,    46,    48,    54,    59,    60,    61,    62,    63,
+      64,    66,    73,    83,    88,   107,   161,   171,   194,   212,
+     234,    45,    46,   107,    88,   108,   111,   114,   117,   120,
+      88,   206,    45,   184,    46,   200,    46,   202,   204,    65,
+      67,    68,    69,    70,    71,     3,   123,    66,    88,   107,
+     219,     0,   215,    33,   154,    28,   128,    30,   142,    37,
+     168,    66,    45,   198,   195,     4,     5,     6,     7,     8,
+       9,    10,    11,    12,    13,    15,    16,    17,   197,    89,
+      86,    51,    48,    54,    56,    59,   194,    54,    55,   107,
+      91,   105,   109,   112,   115,   118,   121,   208,   207,    45,
+     172,    87,    88,   189,   201,   162,   203,   205,    72,    88,
+     124,    47,    47,    47,    66,   212,   227,   216,    46,    46,
+      46,    48,    45,     3,    74,   235,   199,   196,    88,    88,
+      88,    88,    88,    88,    88,    88,    88,    88,    88,    88,
+      88,   213,   223,    57,   222,    51,    58,   110,   113,   116,
+     119,   122,     3,   185,   173,    47,   190,    47,    52,    73,
+      84,   125,   107,   106,   126,    45,    48,    59,   194,   228,
+      49,    88,   129,    45,   169,     3,    88,    75,   236,   104,
+     103,    98,    97,   102,    99,   101,   100,    92,    93,    94,
+      95,    96,   214,   227,   217,    88,   186,    48,   209,   191,
+     211,    88,    51,    85,    90,   127,    51,   229,   220,   155,
+      88,   143,   227,    88,    77,    76,   237,    49,   218,   187,
+      45,   175,   210,   192,   163,   221,    47,   130,    47,    49,
+      80,    78,    46,   238,   224,   188,     3,    52,   176,    49,
+     193,   164,   156,   131,   144,   170,    81,    79,    47,    66,
+     230,    48,   225,    88,   175,   177,   174,    88,   157,    47,
+     145,    38,    82,    45,    47,   227,   226,    52,   178,   180,
+      51,    48,    48,    48,    46,   231,   232,    49,   175,   179,
+     181,   165,   158,   132,   146,    88,   233,   182,    45,    83,
+     227,   133,    31,    32,   148,   149,    47,    52,   183,    47,
+      49,   227,   150,    50,    49,   149,    51,   230,    48,   159,
+      49,    88,   153,   147,   166,   160,   134,   151,   212,   227,
+      29,   135,   136,    50,    49,    48,   137,   152,   167,   139,
+     138,   212,   140,   128,   227,    49,   141
 };
 
 #define yyerrok		(yyerrstatus = 0)
@@ -1934,1407 +2021,1729 @@ yyreduce:
         case 3:
 
 /* Line 1455 of yacc.c  */
-#line 252 "main.y"
+#line 307 "main.y"
     {printf("{*inside Rule*} program -> functionDefinition : \n");;}
     break;
 
   case 4:
 
 /* Line 1455 of yacc.c  */
-#line 253 "main.y"
-    {printf("{*inside Rule*} program -> statements : \n");;}
+#line 307 "main.y"
+    {printf("{*outside Rule*} program -> functionDefinition : \n---------------------------------\n");;}
     break;
 
   case 5:
 
 /* Line 1455 of yacc.c  */
-#line 254 "main.y"
-    {printf("{*inside Rule*} program -> statements program : \n");;}
+#line 308 "main.y"
+    {printf("{*inside Rule*} program -> statements : \n");;}
     break;
 
   case 6:
 
 /* Line 1455 of yacc.c  */
-#line 255 "main.y"
-    {printf("{*inside Rule*} program -> functionDefinition program : \n");;;}
+#line 308 "main.y"
+    {printf("{*outside Rule*} program -> statements : \n---------------------------------\n");;}
     break;
 
   case 7:
 
 /* Line 1455 of yacc.c  */
-#line 256 "main.y"
-    {;;}
+#line 309 "main.y"
+    {printf("{*inside Rule*} program -> statements program : \n");;}
     break;
 
   case 8:
 
 /* Line 1455 of yacc.c  */
-#line 260 "main.y"
-    {quadPushStartLabel(++startLabelNum);;}
+#line 309 "main.y"
+    {printf("{*outside Rule*} program -> statements program : \n---------------------------------\n");;}
     break;
 
   case 9:
 
 /* Line 1455 of yacc.c  */
-#line 260 "main.y"
-    {quadPopStartLabel();;}
+#line 310 "main.y"
+    {printf("{*inside Rule*} program -> functionDefinition program : \n");;}
     break;
 
   case 10:
 
 /* Line 1455 of yacc.c  */
-#line 261 "main.y"
-    {quadPopStartLabel();;}
+#line 310 "main.y"
+    {printf("{*outside Rule*} program -> functionDefinition program : \n---------------------------------\n");;}
     break;
 
   case 11:
 
 /* Line 1455 of yacc.c  */
-#line 262 "main.y"
-    {quadPushEndLabel(++endLabelNum);;}
+#line 311 "main.y"
+    {;;}
     break;
 
   case 12:
 
 /* Line 1455 of yacc.c  */
-#line 262 "main.y"
-    {quadPopEndLabel();;}
+#line 315 "main.y"
+    {quadPushStartLabel(++startLabelNum);;}
     break;
 
   case 13:
 
 /* Line 1455 of yacc.c  */
-#line 263 "main.y"
-    {quadPushEndLabel(++endLabelNum);;}
+#line 315 "main.y"
+    {quadPopStartLabel();;}
     break;
 
   case 14:
 
 /* Line 1455 of yacc.c  */
-#line 263 "main.y"
-    {quadPopEndLabel();;}
+#line 316 "main.y"
+    {quadPopStartLabel();;}
     break;
 
   case 15:
 
 /* Line 1455 of yacc.c  */
-#line 264 "main.y"
-    {quadPushStartLabel(++startLabelNum);;}
+#line 317 "main.y"
+    {quadPushEndLabel(++endLabelNum);;}
     break;
 
   case 16:
 
 /* Line 1455 of yacc.c  */
-#line 264 "main.y"
-    {quadPopStartLabel();;}
+#line 317 "main.y"
+    {quadPopEndLabel();;}
     break;
 
   case 17:
 
 /* Line 1455 of yacc.c  */
-#line 269 "main.y"
-    {printf("{*inside Rule*} dataModifier -> CONST . : \n");;}
+#line 318 "main.y"
+    {quadPushEndLabel(++endLabelNum);;}
     break;
 
   case 18:
 
 /* Line 1455 of yacc.c  */
-#line 271 "main.y"
-    {printf("{*inside Rule*} dataModifier -> INT_DATA_TYPE : \n");;}
+#line 318 "main.y"
+    {quadPopEndLabel();;}
     break;
 
   case 19:
 
 /* Line 1455 of yacc.c  */
-#line 271 "main.y"
-    { (yyval.TYPE_NODE) = createIntNode(0); ;}
+#line 319 "main.y"
+    {quadPushStartLabel(++startLabelNum);;}
     break;
 
   case 20:
 
 /* Line 1455 of yacc.c  */
-#line 272 "main.y"
-    {printf("{*inside Rule*} dataModifier -> FLOAT_DATA_TYPE : \n");;}
+#line 319 "main.y"
+    {quadPopStartLabel();;}
     break;
 
   case 21:
 
 /* Line 1455 of yacc.c  */
-#line 272 "main.y"
-    { (yyval.TYPE_NODE) = createNode("float"); ;}
+#line 324 "main.y"
+    {printf("{*inside Rule*} dataModifier -> CONST . : \n");;}
     break;
 
   case 22:
 
 /* Line 1455 of yacc.c  */
-#line 273 "main.y"
-    {printf("{*inside Rule*} dataModifier -> STRING_DATA_TYPE : \n");;}
+#line 324 "main.y"
+    {printf("{*outside Rule*} dataModifier -> CONST . : \n---------------------------------\n");;}
     break;
 
   case 23:
 
 /* Line 1455 of yacc.c  */
-#line 273 "main.y"
-    { (yyval.TYPE_NODE) = createNode("string"); ;}
+#line 326 "main.y"
+    {printf("{*inside Rule*} dataType -> INT_DATA_TYPE : \n");;}
     break;
 
   case 24:
 
 /* Line 1455 of yacc.c  */
-#line 274 "main.y"
-    {printf("{*inside Rule*} dataModifier -> BOOL_DATA_TYPE : \n");;}
+#line 326 "main.y"
+    { (yyval.TYPE_NODE) = createIntNode(0); printf("{*outside Rule*} dataType -> INT_DATA_TYPE : \n---------------------------------\n");;}
     break;
 
   case 25:
 
 /* Line 1455 of yacc.c  */
-#line 274 "main.y"
-    { (yyval.TYPE_NODE) = createNode("bool"); ;}
+#line 327 "main.y"
+    {printf("{*inside Rule*} dataType -> FLOAT_DATA_TYPE : \n");;}
     break;
 
   case 26:
 
 /* Line 1455 of yacc.c  */
-#line 275 "main.y"
-    {printf("{*inside Rule*} dataModifier -> VOID_DATA_TYPE : \n");;}
+#line 327 "main.y"
+    { (yyval.TYPE_NODE) = createNode("float"); printf("{*outside Rule*} dataType -> FLOAT_DATA_TYPE : \n---------------------------------\n");;}
     break;
 
   case 27:
 
 /* Line 1455 of yacc.c  */
-#line 275 "main.y"
-    { ; ;}
+#line 328 "main.y"
+    {printf("{*inside Rule*} dataType -> STRING_DATA_TYPE : \n");;}
     break;
 
   case 28:
 
 /* Line 1455 of yacc.c  */
-#line 278 "main.y"
-    {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");;}
+#line 328 "main.y"
+    { (yyval.TYPE_NODE) = createNode("string"); printf("{*outside Rule*} dataType -> STRING_DATA_TYPE : \n---------------------------------\n");;}
     break;
 
   case 29:
 
 /* Line 1455 of yacc.c  */
-#line 278 "main.y"
-    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR));  insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]); ;}
+#line 329 "main.y"
+    {printf("{*inside Rule*} dataType -> BOOL_DATA_TYPE : \n");;}
     break;
 
   case 30:
 
 /* Line 1455 of yacc.c  */
-#line 278 "main.y"
-    {printSymbolTable(); quadPopIdentifier((yyvsp[(2) - (4)].TYPE_STR));;}
+#line 329 "main.y"
+    { (yyval.TYPE_NODE) = createNode("bool"); printf("{*outside Rule*} dataType -> BOOL_DATA_TYPE : \n---------------------------------\n");;}
     break;
 
   case 31:
 
 /* Line 1455 of yacc.c  */
-#line 279 "main.y"
-    {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");;}
+#line 330 "main.y"
+    {printf("{*inside Rule*} dataType -> VOID_DATA_TYPE : \n");;}
     break;
 
   case 32:
 
 /* Line 1455 of yacc.c  */
-#line 279 "main.y"
-    {checkSameScope((yyvsp[(2) - (5)].TYPE_STR));  nodeNodeTypeCheck((yyvsp[(1) - (5)].TYPE_NODE), (yyvsp[(4) - (5)].TYPE_NODE)); insert((yyvsp[(2) - (5)].TYPE_STR), (yyvsp[(1) - (5)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue((yyvsp[(2) - (5)].TYPE_STR),(yyvsp[(4) - (5)].TYPE_NODE)); setInit((yyvsp[(2) - (5)].TYPE_STR)); ;}
+#line 330 "main.y"
+    { ; ;}
     break;
 
   case 33:
 
 /* Line 1455 of yacc.c  */
-#line 279 "main.y"
-    {printSymbolTable(); quadPopIdentifier((yyvsp[(2) - (6)].TYPE_STR));;}
+#line 330 "main.y"
+    {printf("{*outside Rule*} dataType -> VOID_DATA_TYPE : \n---------------------------------\n");;}
     break;
 
   case 34:
 
 /* Line 1455 of yacc.c  */
-#line 280 "main.y"
-    {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");;}
+#line 333 "main.y"
+    {printf("{*inside Rule*} decleration -> dataType IDENTIFIER : \n");;}
     break;
 
   case 35:
 
 /* Line 1455 of yacc.c  */
-#line 280 "main.y"
-    {checkSameScope((yyvsp[(3) - (6)].TYPE_STR));  nodeNodeTypeCheck((yyvsp[(2) - (6)].TYPE_NODE), (yyvsp[(5) - (6)].TYPE_NODE)); insert((yyvsp[(3) - (6)].TYPE_STR), (yyvsp[(2) - (6)].TYPE_NODE)->type, 1, 0, 0, scopes[scope_idx-1]);  updateIdentifierValue((yyvsp[(3) - (6)].TYPE_STR),(yyvsp[(5) - (6)].TYPE_NODE)); setInit((yyvsp[(3) - (6)].TYPE_STR)); ;}
+#line 333 "main.y"
+    {int updated_scope_level = checkSameScope((yyvsp[(2) - (3)].TYPE_STR));  insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, updated_scope_level); ;}
     break;
 
   case 36:
 
 /* Line 1455 of yacc.c  */
-#line 280 "main.y"
-    {printSymbolTable();;}
+#line 333 "main.y"
+    { quadPopIdentifier((yyvsp[(2) - (4)].TYPE_STR));;}
     break;
 
   case 37:
 
 /* Line 1455 of yacc.c  */
-#line 280 "main.y"
-    {printSymbolTable();  quadPopIdentifier((yyvsp[(3) - (8)].TYPE_STR));;}
+#line 333 "main.y"
+    {printf("{*outside Rule*} decleration -> dataType IDENTIFIER : \n---------------------------------\n");;}
     break;
 
   case 38:
 
 /* Line 1455 of yacc.c  */
-#line 285 "main.y"
-    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");;}
+#line 334 "main.y"
+    {printf("{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n");;}
     break;
 
   case 39:
 
 /* Line 1455 of yacc.c  */
-#line 285 "main.y"
-    { checkOutOfScope((yyvsp[(1) - (4)].TYPE_STR)); checkConst((yyvsp[(1) - (4)].TYPE_STR)); identifierNodeTypeCheck((yyvsp[(1) - (4)].TYPE_STR), (yyvsp[(3) - (4)].TYPE_NODE)); setInit((yyvsp[(1) - (4)].TYPE_STR)); setUsed((yyvsp[(1) - (4)].TYPE_STR)); updateIdentifierValue((yyvsp[(1) - (4)].TYPE_STR),(yyvsp[(3) - (4)].TYPE_NODE)); ;}
+#line 334 "main.y"
+    {int updated_scope_level = checkSameScope((yyvsp[(2) - (5)].TYPE_STR));  nodeNodeTypeCheck((yyvsp[(1) - (5)].TYPE_NODE), (yyvsp[(4) - (5)].TYPE_NODE)); insert((yyvsp[(2) - (5)].TYPE_STR), (yyvsp[(1) - (5)].TYPE_NODE)->type, 0, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue((yyvsp[(2) - (5)].TYPE_STR),(yyvsp[(4) - (5)].TYPE_NODE));} ;}
     break;
 
   case 40:
 
 /* Line 1455 of yacc.c  */
-#line 285 "main.y"
-    {printSymbolTable();;}
+#line 334 "main.y"
+    { quadPopIdentifier((yyvsp[(2) - (6)].TYPE_STR));;}
     break;
 
   case 41:
 
 /* Line 1455 of yacc.c  */
-#line 285 "main.y"
-    {printf(castingTo((yyvsp[(3) - (6)].TYPE_NODE),"string")->value.stringVal); (yyval.TYPE_NODE) = (yyvsp[(3) - (6)].TYPE_NODE); quadPopIdentifier((yyvsp[(1) - (6)].TYPE_STR));;}
+#line 334 "main.y"
+    {printf("{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : \n---------------------------------\n");;}
     break;
 
   case 42:
 
 /* Line 1455 of yacc.c  */
-#line 286 "main.y"
-    {printf("{*inside Rule*} assignment -> enumDef   : \n");;}
+#line 335 "main.y"
+    {printf("{*inside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n");;}
     break;
 
   case 43:
 
 /* Line 1455 of yacc.c  */
-#line 287 "main.y"
-    {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");;}
+#line 335 "main.y"
+    {int updated_scope_level = checkSameScope((yyvsp[(3) - (6)].TYPE_STR));  nodeNodeTypeCheck((yyvsp[(2) - (6)].TYPE_NODE), (yyvsp[(5) - (6)].TYPE_NODE)); insert((yyvsp[(3) - (6)].TYPE_STR), (yyvsp[(2) - (6)].TYPE_NODE)->type, 1, 1, 0, updated_scope_level);  if(updated_scope_level != -1){updateIdentifierValue((yyvsp[(3) - (6)].TYPE_STR),(yyvsp[(5) - (6)].TYPE_NODE));}  ;}
     break;
 
   case 44:
 
 /* Line 1455 of yacc.c  */
-#line 292 "main.y"
-    {printf("{*inside Rule*} expr -> term   : \n");;}
+#line 335 "main.y"
+    {  quadPopIdentifier((yyvsp[(3) - (7)].TYPE_STR));;}
     break;
 
   case 45:
 
 /* Line 1455 of yacc.c  */
-#line 292 "main.y"
-    { (yyval.TYPE_NODE) = (yyvsp[(1) - (2)].TYPE_NODE); ;}
+#line 335 "main.y"
+    {printf("{*outside Rule*} decleration -> dataModifier dataType IDENTIFIER  '='  expr : \n---------------------------------\n");;}
     break;
 
   case 46:
 
 /* Line 1455 of yacc.c  */
-#line 293 "main.y"
-    {printf("{*inside Rule*} expr ->  '(' dataType ')' term   : \n");;}
+#line 340 "main.y"
+    {printf("{*inside Rule*} assignment -> IDENTIFIER '='  expr   : \n");;}
     break;
 
   case 47:
 
 /* Line 1455 of yacc.c  */
-#line 293 "main.y"
-    {quadInstruction("CAST"); (yyval.TYPE_NODE) = castingTo((yyvsp[(4) - (5)].TYPE_NODE), (yyvsp[(2) - (5)].TYPE_NODE)->type);;}
+#line 340 "main.y"
+    { int Out_of_scope = checkUndeclared_and_OutOfScope((yyvsp[(1) - (4)].TYPE_STR)); if (Out_of_scope == 0 ){ int constant = checkConst((yyvsp[(1) - (4)].TYPE_STR)); if (constant == 0){ identifierNodeTypeCheck((yyvsp[(1) - (4)].TYPE_STR), (yyvsp[(3) - (4)].TYPE_NODE)); setInit((yyvsp[(1) - (4)].TYPE_STR)); setUsed((yyvsp[(1) - (4)].TYPE_STR)); updateIdentifierValue((yyvsp[(1) - (4)].TYPE_STR),(yyvsp[(3) - (4)].TYPE_NODE)); }};}
     break;
 
   case 48:
 
 /* Line 1455 of yacc.c  */
-#line 294 "main.y"
-    {printf("{*inside Rule*} expr -> '-' term   : \n");;}
+#line 340 "main.y"
+    { (yyval.TYPE_NODE) = (yyvsp[(3) - (5)].TYPE_NODE); quadPopIdentifier((yyvsp[(1) - (5)].TYPE_STR)); printf("{*outside Rule*} assignment -> IDENTIFIER '='  expr   : \n---------------------------------\n");;}
     break;
 
   case 49:
 
 /* Line 1455 of yacc.c  */
-#line 294 "main.y"
-    {quadInstruction("NEG"); (yyval.TYPE_NODE) = Negation((yyvsp[(2) - (3)].TYPE_NODE)); ;}
+#line 341 "main.y"
+    {printf("{*inside Rule*} assignment -> enumDefinition   : \n");;}
     break;
 
   case 50:
 
 /* Line 1455 of yacc.c  */
-#line 295 "main.y"
-    {printf("{*inside Rule*} expr -> expr '+' expr   : \n");;}
+#line 341 "main.y"
+    {printf("{*outside Rule*} assignment -> enumDefinition   : \n---------------------------------\n");;}
     break;
 
   case 51:
 
 /* Line 1455 of yacc.c  */
-#line 295 "main.y"
-    {quadInstruction("ADD"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"+"); ;}
+#line 342 "main.y"
+    {printf("{*inside Rule*} assignment -> ENUM enumDeclaration   : \n");;}
     break;
 
   case 52:
 
 /* Line 1455 of yacc.c  */
-#line 296 "main.y"
-    {printf("{*inside Rule*} expr -> expr '-' expr   : \n");;}
+#line 342 "main.y"
+    {printf("{*outside Rule*} assignment -> ENUM enumDeclaration   : \n---------------------------------\n");;}
     break;
 
   case 53:
 
 /* Line 1455 of yacc.c  */
-#line 296 "main.y"
-    {quadInstruction("SUB"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"-"); ;}
+#line 347 "main.y"
+    {printf("{*inside Rule*} expr -> term   : \n");;}
     break;
 
   case 54:
 
 /* Line 1455 of yacc.c  */
-#line 297 "main.y"
-    {printf("{*inside Rule*} expr -> expr '*' expr   : \n");;}
+#line 347 "main.y"
+    { (yyval.TYPE_NODE) = (yyvsp[(1) - (2)].TYPE_NODE); printf("{*outside Rule*} expr -> term   : \n---------------------------------\n");;}
     break;
 
   case 55:
 
 /* Line 1455 of yacc.c  */
-#line 297 "main.y"
-    {quadInstruction("MUL"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"*"); ;}
+#line 348 "main.y"
+    {printf("{*inside Rule*} expr ->  '(' dataType ')' term   : \n");;}
     break;
 
   case 56:
 
 /* Line 1455 of yacc.c  */
-#line 298 "main.y"
-    {printf("{*inside Rule*} expr -> expr '/' expr   : \n");;}
+#line 348 "main.y"
+    {quadInstruction("CAST"); (yyval.TYPE_NODE) = castingTo((yyvsp[(4) - (5)].TYPE_NODE), (yyvsp[(2) - (5)].TYPE_NODE)->type);printf("{*outside Rule*} expr ->  '(' dataType ')' term   : \n---------------------------------\n");;}
     break;
 
   case 57:
 
 /* Line 1455 of yacc.c  */
-#line 298 "main.y"
-    {quadInstruction("DIV"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"/"); ;}
+#line 349 "main.y"
+    {printf("{*inside Rule*} expr -> '-' term   : \n");;}
     break;
 
   case 58:
 
 /* Line 1455 of yacc.c  */
-#line 299 "main.y"
-    {printf("{*inside Rule*} expr -> expr '%' expr   : \n");;}
+#line 349 "main.y"
+    {quadInstruction("NEG"); (yyval.TYPE_NODE) = Negation((yyvsp[(2) - (3)].TYPE_NODE)); printf("{*outside Rule*} expr -> '-' term   : \n---------------------------------\n");;}
     break;
 
   case 59:
 
 /* Line 1455 of yacc.c  */
-#line 299 "main.y"
-    {quadInstruction("MOD"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"%"); ;}
+#line 350 "main.y"
+    {printf("{*inside Rule*} expr -> expr '+' expr   : \n");;}
     break;
 
   case 60:
 
 /* Line 1455 of yacc.c  */
-#line 300 "main.y"
-    {printf("{*inside Rule*} expr -> expr EQ expr   : \n");;}
+#line 350 "main.y"
+    {quadInstruction("ADD"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"+"); printf("{*outside Rule*} expr -> expr '+' expr   : \n---------------------------------\n");;}
     break;
 
   case 61:
 
 /* Line 1455 of yacc.c  */
-#line 300 "main.y"
-    {quadInstruction("EQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"==");;}
+#line 351 "main.y"
+    {printf("{*inside Rule*} expr -> expr '-' expr   : \n");;}
     break;
 
   case 62:
 
 /* Line 1455 of yacc.c  */
-#line 301 "main.y"
-    {printf("{*inside Rule*} expr -> expr NEQ expr   : \n");;}
+#line 351 "main.y"
+    {quadInstruction("SUB"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"-"); printf("{*outside Rule*} expr -> expr '-' expr   : \n---------------------------------\n");;}
     break;
 
   case 63:
 
 /* Line 1455 of yacc.c  */
-#line 301 "main.y"
-    {quadInstruction("NEQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"!=");;}
+#line 352 "main.y"
+    {printf("{*inside Rule*} expr -> expr '*' expr   : \n");;}
     break;
 
   case 64:
 
 /* Line 1455 of yacc.c  */
-#line 302 "main.y"
-    {printf("{*inside Rule*} expr -> expr LT expr   : \n");;}
+#line 352 "main.y"
+    {quadInstruction("MUL"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"*"); printf("{*outside Rule*} expr -> expr '*' expr   : \n---------------------------------\n");;}
     break;
 
   case 65:
 
 /* Line 1455 of yacc.c  */
-#line 302 "main.y"
-    {quadInstruction("LT");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"<"); ;}
+#line 353 "main.y"
+    {printf("{*inside Rule*} expr -> expr '/' expr   : \n");;}
     break;
 
   case 66:
 
 /* Line 1455 of yacc.c  */
-#line 303 "main.y"
-    {printf("{*inside Rule*} expr -> expr GT expr   : \n");;}
+#line 353 "main.y"
+    {quadInstruction("DIV"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"/"); printf("{*outside Rule*} expr -> expr '/' expr   : \n---------------------------------\n");;}
     break;
 
   case 67:
 
 /* Line 1455 of yacc.c  */
-#line 303 "main.y"
-    {quadInstruction("GT");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),">"); ;}
+#line 354 "main.y"
+    {printf("{*inside Rule*} expr -> expr '%' expr   : \n");;}
     break;
 
   case 68:
 
 /* Line 1455 of yacc.c  */
-#line 304 "main.y"
-    {printf("{*inside Rule*} expr -> expr GEQ expr   : \n");;}
+#line 354 "main.y"
+    {quadInstruction("MOD"); (yyval.TYPE_NODE) = arithmatic((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"%"); printf("{*outside Rule*} expr -> expr '%' expr   : \n---------------------------------\n");;}
     break;
 
   case 69:
 
 /* Line 1455 of yacc.c  */
-#line 304 "main.y"
-    {quadInstruction("GEQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),">="); ;}
+#line 355 "main.y"
+    {printf("{*inside Rule*} expr -> expr EQ expr   : \n");;}
     break;
 
   case 70:
 
 /* Line 1455 of yacc.c  */
-#line 305 "main.y"
-    {printf("{*inside Rule*} expr -> expr LEQ expr   : \n");;}
+#line 355 "main.y"
+    {quadInstruction("EQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"==");printf("{*outside Rule*} expr -> expr EQ expr   : \n---------------------------------\n");;}
     break;
 
   case 71:
 
 /* Line 1455 of yacc.c  */
-#line 305 "main.y"
-    {quadInstruction("LEQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"<="); ;}
+#line 356 "main.y"
+    {printf("{*inside Rule*} expr -> expr NEQ expr   : \n");;}
     break;
 
   case 72:
 
 /* Line 1455 of yacc.c  */
-#line 306 "main.y"
-    {printf("{*inside Rule*} expr -> expr AND expr   : \n");;}
+#line 356 "main.y"
+    {quadInstruction("NEQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"!=");printf("{*outside Rule*} expr -> expr NEQ expr   : \n---------------------------------\n");;}
     break;
 
   case 73:
 
 /* Line 1455 of yacc.c  */
-#line 306 "main.y"
-    {quadInstruction("LOGICAL_AND"); (yyval.TYPE_NODE) = logical((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"&"); ;}
+#line 357 "main.y"
+    {printf("{*inside Rule*} expr -> expr LT expr   : \n");;}
     break;
 
   case 74:
 
 /* Line 1455 of yacc.c  */
-#line 307 "main.y"
-    {printf("{*inside Rule*} expr -> expr OR expr   : \n");;}
+#line 357 "main.y"
+    {quadInstruction("LT");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"<"); printf("{*outside Rule*} expr -> expr LT expr   : \n---------------------------------\n");;}
     break;
 
   case 75:
 
 /* Line 1455 of yacc.c  */
-#line 307 "main.y"
-    {quadInstruction("LOGICAL_OR"); (yyval.TYPE_NODE) = logical((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"|"); ;}
+#line 358 "main.y"
+    {printf("{*inside Rule*} expr -> expr GT expr   : \n");;}
     break;
 
   case 76:
 
 /* Line 1455 of yacc.c  */
-#line 308 "main.y"
-    {printf("{*inside Rule*} expr -> NOT expr   : \n");;}
+#line 358 "main.y"
+    {quadInstruction("GT");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),">"); printf("{*outside Rule*} expr -> expr GT expr   : \n---------------------------------\n");;}
     break;
 
   case 77:
 
 /* Line 1455 of yacc.c  */
-#line 308 "main.y"
-    {quadInstruction("NOT"); (yyval.TYPE_NODE) = logical((yyvsp[(2) - (3)].TYPE_NODE),NULL,"!"); ;}
+#line 359 "main.y"
+    {printf("{*inside Rule*} expr -> expr GEQ expr   : \n");;}
     break;
 
   case 78:
 
 /* Line 1455 of yacc.c  */
-#line 309 "main.y"
-    {printf("{*inside Rule*} expr -> '(' expr ')'   : \n");;}
+#line 359 "main.y"
+    {quadInstruction("GEQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),">="); printf("{*outside Rule*} expr -> expr GEQ expr   : \n---------------------------------\n");;}
     break;
 
   case 79:
 
 /* Line 1455 of yacc.c  */
-#line 309 "main.y"
-    { (yyval.TYPE_NODE) = (yyvsp[(2) - (4)].TYPE_NODE);;}
+#line 360 "main.y"
+    {printf("{*inside Rule*} expr -> expr LEQ expr   : \n");;}
     break;
 
   case 80:
 
 /* Line 1455 of yacc.c  */
-#line 313 "main.y"
-    {printf("{*inside Rule*} term -> INTEGER   : \n");;}
+#line 360 "main.y"
+    {quadInstruction("LEQ");  (yyval.TYPE_NODE) = doComparison((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"<="); printf("{*outside Rule*} expr -> expr LEQ expr   : \n---------------------------------\n");;}
     break;
 
   case 81:
 
 /* Line 1455 of yacc.c  */
-#line 313 "main.y"
-    {quadPushInt((yyvsp[(1) - (2)].TYPE_INT)); ;}
+#line 361 "main.y"
+    {printf("{*inside Rule*} expr -> expr AND expr   : \n");;}
     break;
 
   case 82:
 
 /* Line 1455 of yacc.c  */
-#line 313 "main.y"
-    { (yyval.TYPE_NODE) = createIntNode((yyvsp[(1) - (3)].TYPE_INT));    (yyval.TYPE_NODE)->value.intVal = (yyvsp[(1) - (3)].TYPE_INT);;}
+#line 361 "main.y"
+    {quadInstruction("LOGICAL_AND"); (yyval.TYPE_NODE) = logical((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"&"); printf("{*outside Rule*} expr -> expr AND expr   : \n---------------------------------\n");;}
     break;
 
   case 83:
 
 /* Line 1455 of yacc.c  */
-#line 314 "main.y"
-    {printf("{*inside Rule*} term -> FLOAT_NUMBER    : \n");;}
+#line 362 "main.y"
+    {printf("{*inside Rule*} expr -> expr OR expr   : \n");;}
     break;
 
   case 84:
 
 /* Line 1455 of yacc.c  */
-#line 314 "main.y"
-    {quadPushFloat((yyvsp[(1) - (2)].TYPE_FLOAT)); ;}
+#line 362 "main.y"
+    {quadInstruction("LOGICAL_OR"); (yyval.TYPE_NODE) = logical((yyvsp[(1) - (4)].TYPE_NODE),(yyvsp[(3) - (4)].TYPE_NODE),"|"); printf("{*outside Rule*} expr -> expr OR expr   : \n---------------------------------\n");;}
     break;
 
   case 85:
 
 /* Line 1455 of yacc.c  */
-#line 314 "main.y"
-    { (yyval.TYPE_NODE) = createNode("float");  (yyval.TYPE_NODE)->value.floatVal = (yyvsp[(1) - (3)].TYPE_FLOAT);;}
+#line 363 "main.y"
+    {printf("{*inside Rule*} expr -> NOT expr   : \n");;}
     break;
 
   case 86:
 
 /* Line 1455 of yacc.c  */
-#line 315 "main.y"
-    {printf("{*inside Rule*} term -> STRING    : \n");;}
+#line 363 "main.y"
+    {quadInstruction("NOT"); (yyval.TYPE_NODE) = logical((yyvsp[(2) - (3)].TYPE_NODE),NULL,"!"); printf("{*outside Rule*} expr -> NOT expr   : \n---------------------------------\n");;}
     break;
 
   case 87:
 
 /* Line 1455 of yacc.c  */
-#line 315 "main.y"
-    {quadPushString((yyvsp[(1) - (2)].TYPE_STR));;}
+#line 364 "main.y"
+    {printf("{*inside Rule*} expr -> '(' expr ')'   : \n");;}
     break;
 
   case 88:
 
 /* Line 1455 of yacc.c  */
-#line 315 "main.y"
-    { (yyval.TYPE_NODE) = createNode("string"); (yyval.TYPE_NODE)->value.stringVal = strdup((yyvsp[(1) - (3)].TYPE_STR));;}
+#line 364 "main.y"
+    { (yyval.TYPE_NODE) = (yyvsp[(2) - (4)].TYPE_NODE);printf("{*outside Rule*} expr -> '(' expr ')'   : \n---------------------------------\n");;}
     break;
 
   case 89:
 
 /* Line 1455 of yacc.c  */
-#line 316 "main.y"
-    {printf("{*inside Rule*} term -> TRUE_VAL    : \n");;}
+#line 368 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 90:
 
 /* Line 1455 of yacc.c  */
-#line 316 "main.y"
-    {quadPushInt(1);;}
+#line 368 "main.y"
+    {printf("{*inside Rule*} term -> INTEGER   %d  : \n",(yyvsp[(1) - (2)].TYPE_INT));;}
     break;
 
   case 91:
 
 /* Line 1455 of yacc.c  */
-#line 316 "main.y"
-    { (yyval.TYPE_NODE) = createNode("bool");   (yyval.TYPE_NODE)->value.boolVal = 1;;}
+#line 368 "main.y"
+    {quadPushInt((yyvsp[(1) - (3)].TYPE_INT)); ;}
     break;
 
   case 92:
 
 /* Line 1455 of yacc.c  */
-#line 317 "main.y"
-    {printf("{*inside Rule*} term -> FALSE_VAL    : \n");;}
+#line 368 "main.y"
+    { (yyval.TYPE_NODE) = createIntNode((yyvsp[(1) - (4)].TYPE_INT));    (yyval.TYPE_NODE)->value.intVal = (yyvsp[(1) - (4)].TYPE_INT); printf("{*outside Rule*} term -> INTEGER   %d  : \n",(yyvsp[(1) - (4)].TYPE_INT));;}
     break;
 
   case 93:
 
 /* Line 1455 of yacc.c  */
-#line 317 "main.y"
-    {quadPushInt(0);;}
+#line 370 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 94:
 
 /* Line 1455 of yacc.c  */
-#line 317 "main.y"
-    { (yyval.TYPE_NODE) = createNode("bool");   (yyval.TYPE_NODE)->value.boolVal = 0;;}
+#line 370 "main.y"
+    {printf("{*inside Rule*} term -> FLOAT_     %f  : \n",(yyvsp[(1) - (2)].TYPE_FLOAT));;}
     break;
 
   case 95:
 
 /* Line 1455 of yacc.c  */
-#line 318 "main.y"
-    {printf("{*inside Rule*} term -> IDENTIFIER    : \n");;}
+#line 370 "main.y"
+    {quadPushFloat((yyvsp[(1) - (3)].TYPE_FLOAT)); ;}
     break;
 
   case 96:
 
 /* Line 1455 of yacc.c  */
-#line 318 "main.y"
-    {quadPushIdentifier((yyvsp[(1) - (2)].TYPE_STR));;}
+#line 370 "main.y"
+    { (yyval.TYPE_NODE) = createNode("float");  (yyval.TYPE_NODE)->value.floatVal = (yyvsp[(1) - (4)].TYPE_FLOAT) ;printf("{*outside Rule*} term -> FLOAT_     %f  : \n",(yyvsp[(1) - (4)].TYPE_FLOAT));;}
     break;
 
   case 97:
 
 /* Line 1455 of yacc.c  */
-#line 318 "main.y"
-    {checkOutOfScope((yyvsp[(1) - (3)].TYPE_STR)); checkInitialized((yyvsp[(1) - (3)].TYPE_STR)); (yyval.TYPE_NODE) = identifierValue((yyvsp[(1) - (3)].TYPE_STR)); setUsed((yyvsp[(1) - (3)].TYPE_STR));;}
+#line 371 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 98:
 
 /* Line 1455 of yacc.c  */
-#line 319 "main.y"
-    {printf("{*inside Rule*} term -> '(' term ')'    : \n");;}
+#line 371 "main.y"
+    {printf("{*inside Rule*} term -> STRING    %s  : \n",(yyvsp[(1) - (2)].TYPE_STR));;}
     break;
 
   case 99:
 
 /* Line 1455 of yacc.c  */
-#line 319 "main.y"
-    { (yyval.TYPE_NODE) = (yyvsp[(2) - (4)].TYPE_NODE); ;}
+#line 371 "main.y"
+    {quadPushString((yyvsp[(1) - (3)].TYPE_STR));;}
     break;
 
   case 100:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {checkConstIF((yyvsp[(3) - (3)].TYPE_NODE)); quadJumpFalseLabel(++labelNum);;}
+#line 371 "main.y"
+    { (yyval.TYPE_NODE) = createNode("string"); (yyval.TYPE_NODE)->value.stringVal = strdup((yyvsp[(1) - (4)].TYPE_STR));printf("{*outside Rule*} term -> STRING    %s  : \n",(yyvsp[(1) - (4)].TYPE_STR));;}
     break;
 
   case 101:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {printf("IF () is detected \n");;}
+#line 372 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 102:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {enterScope();;}
+#line 372 "main.y"
+    {printf("{*inside Rule*} term -> TRUE_VAL   %d     : \n",(yyvsp[(1) - (2)].TYPE_BOOL));;}
     break;
 
   case 103:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {printf("IF (){} is detected \n");;}
+#line 372 "main.y"
+    {quadPushInt(1);;}
     break;
 
   case 104:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {printf("asdasd");;}
+#line 372 "main.y"
+    { (yyval.TYPE_NODE) = createNode("bool");   (yyval.TYPE_NODE)->value.boolVal = 1;printf("{*outside Rule*} term -> TRUE_VAL  %d      : \n---------------------------------\n",(yyvsp[(1) - (4)].TYPE_BOOL));;}
     break;
 
   case 105:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {quadJumpEndLabel(); exitScope(); quadPopLabel();;}
+#line 373 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 106:
 
 /* Line 1455 of yacc.c  */
-#line 328 "main.y"
-    {;;}
+#line 373 "main.y"
+    {printf("{*inside Rule*} term -> FALSE_VAL  %d     : \n",(yyvsp[(1) - (2)].TYPE_BOOL));;}
     break;
 
   case 107:
 
 /* Line 1455 of yacc.c  */
-#line 330 "main.y"
-    {printf("inside bare else  \n");;}
+#line 373 "main.y"
+    {quadPushInt(0);;}
     break;
 
   case 108:
 
 /* Line 1455 of yacc.c  */
-#line 330 "main.y"
-    {;;}
+#line 373 "main.y"
+    { (yyval.TYPE_NODE) = createNode("bool");   (yyval.TYPE_NODE)->value.boolVal = 0;printf("{*outside Rule*} term -> FALSE_VAL    %d        : \n---------------------------------\n",(yyvsp[(1) - (4)].TYPE_BOOL));;}
     break;
 
   case 109:
 
 /* Line 1455 of yacc.c  */
-#line 331 "main.y"
-    {;;}
+#line 374 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 110:
 
 /* Line 1455 of yacc.c  */
-#line 331 "main.y"
-    {printf("inside else  \n");;}
+#line 374 "main.y"
+    {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",(yyvsp[(1) - (2)].TYPE_STR));;}
     break;
 
   case 111:
 
 /* Line 1455 of yacc.c  */
-#line 331 "main.y"
-    {;;}
+#line 374 "main.y"
+    {quadPushIdentifier((yyvsp[(1) - (3)].TYPE_STR));;}
     break;
 
   case 112:
 
 /* Line 1455 of yacc.c  */
-#line 332 "main.y"
-    {enterScope();;}
+#line 374 "main.y"
+    {int Out_of_scope = checkUndeclared_and_OutOfScope((yyvsp[(1) - (4)].TYPE_STR)); if (Out_of_scope == 0 ){int Initialized = checkInitialized((yyvsp[(1) - (4)].TYPE_STR)); if ( Initialized == 1 ) {setUsed((yyvsp[(1) - (4)].TYPE_STR)); (yyval.TYPE_NODE) = identifierValue((yyvsp[(1) - (4)].TYPE_STR));} else {(yyval.TYPE_NODE) = NULL;}}else {(yyval.TYPE_NODE) = NULL;} printf("{*outside Rule*} term -> IDENTIFIER  %s  : \n",(yyvsp[(1) - (4)].TYPE_STR));;}
     break;
 
   case 113:
 
 /* Line 1455 of yacc.c  */
-#line 332 "main.y"
-    {exitScope();;}
+#line 375 "main.y"
+    {printf("======================================\n");;}
     break;
 
   case 114:
 
 /* Line 1455 of yacc.c  */
-#line 332 "main.y"
-    {printf("else {} detected \n");;}
+#line 375 "main.y"
+    {printf("{*inside Rule*} term -> '(' term ')'    : \n");;}
     break;
 
   case 115:
 
 /* Line 1455 of yacc.c  */
-#line 335 "main.y"
-    {printf("switch case passed  \n");;}
+#line 375 "main.y"
+    { (yyval.TYPE_NODE) = (yyvsp[(2) - (5)].TYPE_NODE); printf("{*outside Rule*} term -> '(' term ')'    : \n---------------------------------\n");;}
     break;
 
   case 116:
 
 /* Line 1455 of yacc.c  */
-#line 335 "main.y"
-    {quadPushLastIdentifierStack((yyvsp[(3) - (5)].TYPE_STR));setInit((yyvsp[(3) - (5)].TYPE_STR));;}
+#line 384 "main.y"
+    {ifCon=1;;}
     break;
 
   case 117:
 
 /* Line 1455 of yacc.c  */
-#line 335 "main.y"
-    {enterScope();;}
+#line 384 "main.y"
+    {checkConstIF((yyvsp[(4) - (4)].TYPE_NODE)); quadJumpFalseLabel(++labelNum);;}
     break;
 
   case 118:
 
 /* Line 1455 of yacc.c  */
-#line 335 "main.y"
-    {exitScope();;}
+#line 384 "main.y"
+    {printf("IF () is detected \n");;}
     break;
 
   case 119:
 
 /* Line 1455 of yacc.c  */
-#line 335 "main.y"
-    {quadPopLastIdentifierStack();;}
+#line 384 "main.y"
+    {enterScope();;}
+    break;
+
+  case 120:
+
+/* Line 1455 of yacc.c  */
+#line 384 "main.y"
+    {printf("IF (){} is detected \n");;}
+    break;
+
+  case 121:
+
+/* Line 1455 of yacc.c  */
+#line 384 "main.y"
+    {quadJumpEndLabel(); exitScope(); quadPopLabel();;}
     break;
 
   case 122:
 
 /* Line 1455 of yacc.c  */
-#line 341 "main.y"
-    {printf("before case \n");;}
+#line 384 "main.y"
+    {;;}
     break;
 
   case 123:
 
 /* Line 1455 of yacc.c  */
-#line 341 "main.y"
-    {quadPeakLastIdentifierStack(); quadJumpFalseLabel(++labelNum);;}
+#line 386 "main.y"
+    {printf("inside bare else  \n");;}
     break;
 
   case 124:
 
 /* Line 1455 of yacc.c  */
-#line 341 "main.y"
-    {printf("inside case  \n");;}
+#line 386 "main.y"
+    {;;}
     break;
 
   case 125:
 
 /* Line 1455 of yacc.c  */
-#line 341 "main.y"
-    {quadPopLabel();;}
+#line 387 "main.y"
+    {;;}
     break;
 
   case 126:
 
 /* Line 1455 of yacc.c  */
-#line 342 "main.y"
-    {;;}
+#line 387 "main.y"
+    {printf("inside else  \n");;}
     break;
 
   case 127:
 
 /* Line 1455 of yacc.c  */
-#line 350 "main.y"
-    {printf("Found a while loop!\n");;}
+#line 387 "main.y"
+    {;;}
     break;
 
   case 128:
 
 /* Line 1455 of yacc.c  */
-#line 350 "main.y"
-    {quadJumpFalseLabel(++labelNum);;}
+#line 388 "main.y"
+    {fromElse=1;;}
     break;
 
   case 129:
 
 /* Line 1455 of yacc.c  */
-#line 350 "main.y"
+#line 388 "main.y"
     {enterScope();;}
     break;
 
   case 130:
 
 /* Line 1455 of yacc.c  */
-#line 350 "main.y"
-    {/*end*/ exitScope(); quadJumpStartLabel(); quadPopLabel();;}
+#line 388 "main.y"
+    {exitScope();;}
     break;
 
   case 131:
 
 /* Line 1455 of yacc.c  */
-#line 350 "main.y"
-    {;;}
+#line 388 "main.y"
+    {printf("else {} detected \n");;}
     break;
 
   case 132:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {printf("for \n");;}
+#line 391 "main.y"
+    {setUsed((yyvsp[(3) - (3)].TYPE_STR)); switchC=1;;}
     break;
 
   case 133:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {printf("for \n");;}
+#line 391 "main.y"
+    {printf("switch case passed  \n");;}
     break;
 
   case 134:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {quadPushStartLabel(++startLabelNum);;}
+#line 391 "main.y"
+    {quadPushLastIdentifierStack((yyvsp[(3) - (6)].TYPE_STR));setInit((yyvsp[(3) - (6)].TYPE_STR));;}
     break;
 
   case 135:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {quadJumpFalseLabel(++labelNum);;}
+#line 391 "main.y"
+    {enterScope();;}
     break;
 
   case 136:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {enterScope();;}
+#line 391 "main.y"
+    {exitScope();;}
     break;
 
   case 137:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {exitScope(); quadJumpStartLabel(); quadPopLabel();;}
+#line 391 "main.y"
+    {quadPopLastIdentifierStack();;}
     break;
 
-  case 138:
+  case 140:
 
 /* Line 1455 of yacc.c  */
-#line 353 "main.y"
-    {;;}
+#line 397 "main.y"
+    {printf("before case \n");;}
     break;
 
   case 141:
 
 /* Line 1455 of yacc.c  */
-#line 359 "main.y"
-    {enterScope();;}
+#line 397 "main.y"
+    {quadPeakLastIdentifierStack(); quadJumpFalseLabel(++labelNum);;}
     break;
 
   case 142:
 
 /* Line 1455 of yacc.c  */
-#line 359 "main.y"
-    {exitScope();;}
+#line 397 "main.y"
+    {printf("inside case  \n");;}
     break;
 
   case 143:
 
 /* Line 1455 of yacc.c  */
-#line 359 "main.y"
-    {quadJumpFalseLabel(++labelNum); quadJumpStartLabel(); quadPopLabel();;}
+#line 397 "main.y"
+    {quadPopLabel();;}
     break;
 
   case 144:
 
 /* Line 1455 of yacc.c  */
-#line 365 "main.y"
-    {printf("{*inside Rule*} enumDef -> ENUM IDENTIFIER   : \n");;}
+#line 398 "main.y"
+    {switchC=0; switchMatch=0;;}
     break;
 
   case 145:
 
 /* Line 1455 of yacc.c  */
-#line 365 "main.y"
-    {quadStartEnum((yyvsp[(2) - (3)].TYPE_STR)); checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), "enum", 1, 1, 0, scopes[scope_idx-1]);;}
+#line 398 "main.y"
+    {;;}
     break;
 
   case 146:
 
 /* Line 1455 of yacc.c  */
-#line 365 "main.y"
-    {quadEndEnum((yyvsp[(2) - (7)].TYPE_STR)); enumCounter=0;;}
+#line 406 "main.y"
+    {whileLoopFound=1; ;}
     break;
 
   case 147:
 
 /* Line 1455 of yacc.c  */
-#line 369 "main.y"
-    {printf("{*inside Rule*} enumBody -> IDENTIFIER   : \n");;}
+#line 406 "main.y"
+    {printf("Found a while loop!\n");;}
     break;
 
   case 148:
 
 /* Line 1455 of yacc.c  */
-#line 369 "main.y"
-    {checkSameScope((yyvsp[(1) - (2)].TYPE_STR)); insert((yyvsp[(1) - (2)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue((yyvsp[(1) - (2)].TYPE_STR),enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter); quadPopIdentifier((yyvsp[(1) - (2)].TYPE_STR));;}
+#line 406 "main.y"
+    {quadJumpFalseLabel(++labelNum);;}
     break;
 
   case 149:
 
 /* Line 1455 of yacc.c  */
-#line 370 "main.y"
-    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");;}
+#line 406 "main.y"
+    {enterScope();;}
     break;
 
   case 150:
 
 /* Line 1455 of yacc.c  */
-#line 370 "main.y"
-    {checkSameScope((yyvsp[(1) - (4)].TYPE_STR)); nodeNodeTypeCheck(enumValues,(yyvsp[(3) - (4)].TYPE_NODE)); insert((yyvsp[(1) - (4)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo((yyvsp[(3) - (4)].TYPE_NODE), "int")->value.intVal; updateIdentifierValue((yyvsp[(1) - (4)].TYPE_STR), enumValues); quadPopIdentifier((yyvsp[(1) - (4)].TYPE_STR));;}
+#line 406 "main.y"
+    {/*end*/ exitScope(); quadJumpStartLabel(); quadPopLabel();;}
     break;
 
   case 151:
 
 /* Line 1455 of yacc.c  */
-#line 371 "main.y"
-    {printf("{*inside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");;}
+#line 406 "main.y"
+    { whileLoopFound=0;;}
     break;
 
   case 152:
 
 /* Line 1455 of yacc.c  */
-#line 371 "main.y"
-    {checkSameScope((yyvsp[(1) - (4)].TYPE_STR)); insert((yyvsp[(1) - (4)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue((yyvsp[(1) - (4)].TYPE_STR), enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter); quadPopIdentifier((yyvsp[(1) - (4)].TYPE_STR));;}
+#line 406 "main.y"
+    {;;}
     break;
 
   case 153:
 
 /* Line 1455 of yacc.c  */
-#line 372 "main.y"
-    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");;}
+#line 409 "main.y"
+    {printf("for \n"); forLoopFound=1;;}
     break;
 
   case 154:
 
 /* Line 1455 of yacc.c  */
-#line 372 "main.y"
-    {checkSameScope((yyvsp[(1) - (6)].TYPE_STR)); nodeNodeTypeCheck(enumValues,(yyvsp[(3) - (6)].TYPE_NODE)); insert((yyvsp[(1) - (6)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo((yyvsp[(3) - (6)].TYPE_NODE), "int")->value.intVal; updateIdentifierValue((yyvsp[(1) - (6)].TYPE_STR), enumValues); quadPopIdentifier((yyvsp[(1) - (6)].TYPE_STR));;}
+#line 409 "main.y"
+    {printf("for \n");;}
     break;
 
   case 155:
 
 /* Line 1455 of yacc.c  */
-#line 375 "main.y"
-    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");;}
+#line 409 "main.y"
+    {quadPushStartLabel(++startLabelNum);;}
     break;
 
   case 156:
 
 /* Line 1455 of yacc.c  */
-#line 375 "main.y"
-    {checkOutOfScope((yyvsp[(1) - (3)].TYPE_STR)); identifierNodeTypeCheck((yyvsp[(1) - (3)].TYPE_STR),createNode("enum")); checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), "int", 0, 0, 0, scopes[scope_idx-1]);;}
+#line 409 "main.y"
+    {quadJumpFalseLabel(++labelNum);;}
     break;
 
   case 157:
 
 /* Line 1455 of yacc.c  */
-#line 376 "main.y"
-    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");;}
+#line 409 "main.y"
+    {enterScope();;}
     break;
 
   case 158:
 
 /* Line 1455 of yacc.c  */
-#line 376 "main.y"
-    {checkOutOfScope((yyvsp[(1) - (5)].TYPE_STR)); identifierNodeTypeCheck((yyvsp[(1) - (5)].TYPE_STR),createNode("enum")); checkSameScope((yyvsp[(2) - (5)].TYPE_STR)); insert((yyvsp[(2) - (5)].TYPE_STR), "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck((yyvsp[(4) - (5)].TYPE_NODE),createIntNode(0)); updateIdentifierValue((yyvsp[(2) - (5)].TYPE_STR),castingTo((yyvsp[(4) - (5)].TYPE_NODE), "int")); quadPopIdentifier((yyvsp[(2) - (5)].TYPE_STR));;}
+#line 409 "main.y"
+    {exitScope(); quadJumpStartLabel(); quadPopLabel();;}
     break;
 
   case 159:
 
 /* Line 1455 of yacc.c  */
-#line 382 "main.y"
-    {printf("{*inside Rule*} printList -> expr      : \n");;}
+#line 409 "main.y"
+    {;;}
     break;
 
   case 160:
 
 /* Line 1455 of yacc.c  */
-#line 382 "main.y"
-    {printNode((yyvsp[(1) - (2)].TYPE_NODE));;}
+#line 415 "main.y"
+    {enterScope();;}
     break;
 
   case 161:
 
 /* Line 1455 of yacc.c  */
-#line 383 "main.y"
-    {printf("{*inside Rule*} printList -> printList ',' expr      : \n");;}
+#line 415 "main.y"
+    {exitScope();;}
     break;
 
   case 162:
 
 /* Line 1455 of yacc.c  */
-#line 383 "main.y"
-    {char* str1 = castingTo((yyvsp[(3) - (4)].TYPE_NODE), "string")->value.stringVal; char* str2 = printStringValues->value.stringVal;  strcat(str1, str2); printStringValues->value.stringVal =  str1;;}
+#line 415 "main.y"
+    {quadJumpFalseLabel(++labelNum); quadJumpStartLabel(); quadPopLabel();;}
     break;
 
   case 163:
 
 /* Line 1455 of yacc.c  */
-#line 386 "main.y"
-    {printf("{*inside Rule*} statement -> assignment  : \n");;}
+#line 421 "main.y"
+    {printf("{*inside Rule*} enumDefinition -> ENUM IDENTIFIER   : \n");;}
     break;
 
   case 164:
 
 /* Line 1455 of yacc.c  */
-#line 386 "main.y"
-    {;;}
+#line 421 "main.y"
+    {quadStartEnum((yyvsp[(2) - (3)].TYPE_STR)); checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), "enum", 1, 1, 0, scopes[scope_idx-1]);;}
     break;
 
   case 165:
 
 /* Line 1455 of yacc.c  */
-#line 387 "main.y"
-    {printf("{*inside Rule*} statement ->  expr  : \n");;}
+#line 421 "main.y"
+    {quadEndEnum((yyvsp[(2) - (7)].TYPE_STR)); enumCounter=0;;}
     break;
 
   case 166:
 
 /* Line 1455 of yacc.c  */
-#line 388 "main.y"
-    {printf("{*inside Rule*} statement ->  decleration  : \n");;}
+#line 421 "main.y"
+    {printf("{*outside Rule*} enumDefinition -> ENUM IDENTIFIER   : \n---------------------------------\n");;}
     break;
 
   case 167:
 
 /* Line 1455 of yacc.c  */
-#line 388 "main.y"
-    {;;}
+#line 425 "main.y"
+    {printf("{*inside Rule*} enumBody -> IDENTIFIER   : \n");;}
     break;
 
   case 168:
 
 /* Line 1455 of yacc.c  */
-#line 389 "main.y"
-    {printf("{*inside Rule*} statement ->  EXIT  : \n");;}
+#line 425 "main.y"
+    {checkSameScope((yyvsp[(1) - (2)].TYPE_STR)); insert((yyvsp[(1) - (2)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue((yyvsp[(1) - (2)].TYPE_STR),enumValues); enumValues->value.intVal = 0; quadPushInt(++enumCounter); quadPopIdentifier((yyvsp[(1) - (2)].TYPE_STR));;}
     break;
 
   case 169:
 
 /* Line 1455 of yacc.c  */
-#line 389 "main.y"
-    {exit(EXIT_SUCCESS);;}
+#line 425 "main.y"
+    {printf("{*outside Rule*} enumBody -> IDENTIFIER   : \n---------------------------------\n");;}
     break;
 
   case 170:
 
 /* Line 1455 of yacc.c  */
-#line 390 "main.y"
-    {printf("{*inside Rule*} statement ->  BREAK  : \n");;}
+#line 426 "main.y"
+    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr    : \n");;}
     break;
 
   case 171:
 
 /* Line 1455 of yacc.c  */
-#line 390 "main.y"
-    {quadJumpEndLabel();;}
+#line 426 "main.y"
+    {checkSameScope((yyvsp[(1) - (4)].TYPE_STR)); nodeNodeTypeCheck(enumValues,(yyvsp[(3) - (4)].TYPE_NODE)); insert((yyvsp[(1) - (4)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo((yyvsp[(3) - (4)].TYPE_NODE), "int")->value.intVal; updateIdentifierValue((yyvsp[(1) - (4)].TYPE_STR), enumValues); quadPopIdentifier((yyvsp[(1) - (4)].TYPE_STR));;}
     break;
 
   case 172:
 
 /* Line 1455 of yacc.c  */
-#line 391 "main.y"
-    {printf("{*inside Rule*} statement ->  CONTINUE  : \n");;}
+#line 426 "main.y"
+    {printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr    : \n---------------------------------\n");;}
     break;
 
   case 173:
 
 /* Line 1455 of yacc.c  */
-#line 391 "main.y"
-    {;;}
+#line 427 "main.y"
+    {printf("{*inside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n");;}
     break;
 
   case 174:
 
 /* Line 1455 of yacc.c  */
-#line 392 "main.y"
-    {printf("{*inside Rule*} statement ->  RETURN  : \n");;}
+#line 427 "main.y"
+    {checkSameScope((yyvsp[(1) - (4)].TYPE_STR)); insert((yyvsp[(1) - (4)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); updateIdentifierValue((yyvsp[(1) - (4)].TYPE_STR), enumValues); enumValues->value.intVal++; quadPushInt(++enumCounter); quadPopIdentifier((yyvsp[(1) - (4)].TYPE_STR));;}
     break;
 
   case 175:
 
 /* Line 1455 of yacc.c  */
-#line 392 "main.y"
-    {quadReturn();;}
+#line 427 "main.y"
+    {printf("{*outside Rule*} enumBody -> IDENTIFIER ',' enumBody    : \n---------------------------------\n");;}
     break;
 
   case 176:
 
 /* Line 1455 of yacc.c  */
-#line 393 "main.y"
-    {printf("{*inside Rule*} statement ->  RETURN expr  : \n");;}
+#line 428 "main.y"
+    {printf("{*inside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n");;}
     break;
 
   case 177:
 
 /* Line 1455 of yacc.c  */
-#line 393 "main.y"
-    {quadReturn(); (yyval.TYPE_VOID) = (yyvsp[(2) - (3)].TYPE_NODE);;}
+#line 428 "main.y"
+    {checkSameScope((yyvsp[(1) - (6)].TYPE_STR)); nodeNodeTypeCheck(enumValues,(yyvsp[(3) - (6)].TYPE_NODE)); insert((yyvsp[(1) - (6)].TYPE_STR), "int", 1, 1, 0, scopes[scope_idx-1]); enumValues->value.intVal = castingTo((yyvsp[(3) - (6)].TYPE_NODE), "int")->value.intVal; updateIdentifierValue((yyvsp[(1) - (6)].TYPE_STR), enumValues); quadPopIdentifier((yyvsp[(1) - (6)].TYPE_STR));;}
     break;
 
   case 178:
 
 /* Line 1455 of yacc.c  */
-#line 394 "main.y"
-    {printf("{*inside Rule*} statement ->  PRINT  '(' expr ')' : \n");;}
+#line 428 "main.y"
+    {printf("{*outside Rule*} enumBody -> IDENTIFIER '=' expr ',' enumBody    : \n---------------------------------\n");;}
     break;
 
   case 179:
 
 /* Line 1455 of yacc.c  */
-#line 394 "main.y"
-    {printNode((yyvsp[(3) - (5)].TYPE_NODE));;}
+#line 431 "main.y"
+    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n");;}
     break;
 
   case 180:
 
 /* Line 1455 of yacc.c  */
-#line 395 "main.y"
-    {printf("{*inside Rule*} statement ->  PRINT  '(' printList ')': \n");;}
+#line 431 "main.y"
+    {checkUndeclared_and_OutOfScope((yyvsp[(1) - (3)].TYPE_STR)); identifierNodeTypeCheck((yyvsp[(1) - (3)].TYPE_STR),createNode("enum")); checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), "int", 0, 0, 0, scopes[scope_idx-1]);;}
     break;
 
   case 181:
 
 /* Line 1455 of yacc.c  */
-#line 395 "main.y"
-    {(yyval.TYPE_VOID) = (yyvsp[(3) - (5)].TYPE_NODE);;}
+#line 431 "main.y"
+    {printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER   : \n---------------------------------\n");;}
     break;
 
   case 182:
 
 /* Line 1455 of yacc.c  */
-#line 400 "main.y"
-    {printf("{*inside Rule*} statements -> statement ';' : \n");;}
+#line 432 "main.y"
+    {printf("{*inside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n");;}
     break;
 
   case 183:
 
 /* Line 1455 of yacc.c  */
-#line 400 "main.y"
-    {;;}
+#line 432 "main.y"
+    {checkUndeclared_and_OutOfScope((yyvsp[(1) - (5)].TYPE_STR)); identifierNodeTypeCheck((yyvsp[(1) - (5)].TYPE_STR),createNode("enum")); checkSameScope((yyvsp[(2) - (5)].TYPE_STR)); insert((yyvsp[(2) - (5)].TYPE_STR), "int", 0, 1, 0, scopes[scope_idx-1]); nodeNodeTypeCheck((yyvsp[(4) - (5)].TYPE_NODE),createIntNode(0)); updateIdentifierValue((yyvsp[(2) - (5)].TYPE_STR),castingTo((yyvsp[(4) - (5)].TYPE_NODE), "int")); quadPopIdentifier((yyvsp[(2) - (5)].TYPE_STR));;}
     break;
 
   case 184:
 
 /* Line 1455 of yacc.c  */
-#line 401 "main.y"
-    {printf("{*inside Rule*} statements -> controlStatement  : \n");;}
+#line 432 "main.y"
+    {printf("{*outside Rule*} enumDeclaration -> IDENTIFIER IDENTIFIER  '=' expr    : \n---------------------------------\n");;}
     break;
 
   case 185:
 
 /* Line 1455 of yacc.c  */
-#line 401 "main.y"
-    {;;}
+#line 438 "main.y"
+    {printf("{*inside Rule*} printList -> expr      : \n");;}
     break;
 
   case 186:
 
 /* Line 1455 of yacc.c  */
-#line 402 "main.y"
-    {printf("{*inside Rule*} statements -> statements statement ';'  : \n");;}
+#line 438 "main.y"
+    {char* str1 = printStringValues->value.stringVal; printf("str1 : { %s }\n",str1); char* str2 = castingTo((yyvsp[(1) - (2)].TYPE_NODE), "string")->value.stringVal;  printf("str2 : { %s }\n",str2); strcat(str1, str2); printStringValues->value.stringVal =  str1; printf("printStringValues : { %s }\n",printStringValues->value.stringVal);;}
     break;
 
   case 187:
 
 /* Line 1455 of yacc.c  */
-#line 402 "main.y"
-    {;;}
+#line 438 "main.y"
+    {printf("{*outside Rule*} printList -> expr      : \n---------------------------------\n");;}
     break;
 
   case 188:
 
 /* Line 1455 of yacc.c  */
-#line 403 "main.y"
-    {enterScope();;}
+#line 439 "main.y"
+    {printf("{*inside Rule*} printList -> printList ',' expr      : \n");;}
     break;
 
   case 189:
 
 /* Line 1455 of yacc.c  */
-#line 403 "main.y"
-    {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");;}
+#line 439 "main.y"
+    {char* str1 = printStringValues->value.stringVal; printf("str1 : { %s }\n",str1); char* str2 = castingTo((yyvsp[(3) - (4)].TYPE_NODE), "string")->value.stringVal; printf("str2 : { %s }\n",str2);  strcat(str1, str2); printStringValues->value.stringVal =  str1; printf("printStringValues : { %s }\n",printStringValues->value.stringVal);;}
     break;
 
   case 190:
 
 /* Line 1455 of yacc.c  */
-#line 403 "main.y"
-    {exitScope();;}
+#line 439 "main.y"
+    {printf("{*outside Rule*} printList -> printList ',' expr      : \n---------------------------------\n");;}
     break;
 
   case 191:
 
 /* Line 1455 of yacc.c  */
-#line 404 "main.y"
-    {printf("{*inside Rule*} statements -> statements controlStatement : \n");;}
+#line 442 "main.y"
+    {printf("{*inside Rule*} statement -> assignment  : \n");;}
     break;
 
   case 192:
 
 /* Line 1455 of yacc.c  */
-#line 405 "main.y"
-    {enterScope();;}
+#line 442 "main.y"
+    {;;}
     break;
 
   case 193:
 
 /* Line 1455 of yacc.c  */
-#line 405 "main.y"
-    {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");;}
+#line 442 "main.y"
+    {printf("{*outside Rule*} statement -> assignment  : \n---------------------------------\n");;}
     break;
 
   case 194:
 
 /* Line 1455 of yacc.c  */
-#line 405 "main.y"
-    {exitScope();;}
+#line 443 "main.y"
+    {printf("{*inside Rule*} statement ->  expr  : \n");;}
     break;
 
   case 195:
 
 /* Line 1455 of yacc.c  */
-#line 405 "main.y"
-    {;;}
+#line 443 "main.y"
+    {printf("{*outside Rule*} statement ->  expr  : \n---------------------------------\n");;}
     break;
 
   case 196:
 
 /* Line 1455 of yacc.c  */
-#line 410 "main.y"
-    {printf("{*inside Rule*} codeBlock -> statements ';' : \n");;}
+#line 444 "main.y"
+    {printf("{*inside Rule*} statement ->  decleration  : \n");;}
     break;
 
   case 197:
 
 /* Line 1455 of yacc.c  */
-#line 415 "main.y"
-    {quadPopIdentifier((yyvsp[(2) - (2)].TYPE_STR));;}
+#line 444 "main.y"
+    {;;}
     break;
 
   case 198:
 
 /* Line 1455 of yacc.c  */
-#line 415 "main.y"
-    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]) ; argCount = sym_table_idx-argCount;;}
+#line 444 "main.y"
+    {printf("{*outside Rule*} statement ->  decleration  : \n---------------------------------\n");;}
     break;
 
   case 199:
 
 /* Line 1455 of yacc.c  */
-#line 416 "main.y"
-    {quadPopIdentifier((yyvsp[(2) - (2)].TYPE_STR));;}
+#line 445 "main.y"
+    {printf("{*inside Rule*} statement ->  EXIT  : \n");;}
     break;
 
   case 200:
 
 /* Line 1455 of yacc.c  */
-#line 416 "main.y"
-    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]) ;;}
+#line 445 "main.y"
+    {exit(EXIT_SUCCESS);;}
+    break;
+
+  case 201:
+
+/* Line 1455 of yacc.c  */
+#line 445 "main.y"
+    {printf("{*outside Rule*} statement ->  EXIT  : \n---------------------------------\n");;}
     break;
 
   case 202:
 
 /* Line 1455 of yacc.c  */
-#line 421 "main.y"
-    {quadStartFunction((yyvsp[(2) - (2)].TYPE_STR));;}
+#line 446 "main.y"
+    {printf("{*inside Rule*} statement ->  BREAK  : \n");;}
     break;
 
   case 203:
 
 /* Line 1455 of yacc.c  */
-#line 421 "main.y"
-    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope();;}
+#line 446 "main.y"
+    {quadJumpEndLabel();;}
     break;
 
   case 204:
 
 /* Line 1455 of yacc.c  */
-#line 422 "main.y"
-    {printf("here \n");;}
+#line 446 "main.y"
+    {printf("{*outside Rule*} statement ->  BREAK  : \n---------------------------------\n");;}
     break;
 
   case 205:
 
 /* Line 1455 of yacc.c  */
-#line 422 "main.y"
-    {exitScope(); quadEndFunction((yyvsp[(2) - (9)].TYPE_STR)); updateSymbolParam((yyvsp[(2) - (9)].TYPE_STR), argCount);;}
+#line 447 "main.y"
+    {printf("{*inside Rule*} statement ->  CONTINUE  : \n");;}
     break;
 
   case 206:
 
 /* Line 1455 of yacc.c  */
-#line 424 "main.y"
-    {printf("definitions with params  \n");;}
+#line 447 "main.y"
+    {;;}
     break;
 
   case 207:
 
 /* Line 1455 of yacc.c  */
-#line 425 "main.y"
+#line 447 "main.y"
+    {printf("{*outside Rule*} statement ->  CONTINUE  : \n---------------------------------\n");;}
+    break;
+
+  case 208:
+
+/* Line 1455 of yacc.c  */
+#line 448 "main.y"
+    {printf("{*inside Rule*} statement ->  RETURN  : \n");;}
+    break;
+
+  case 209:
+
+/* Line 1455 of yacc.c  */
+#line 448 "main.y"
+    {quadReturn();;}
+    break;
+
+  case 210:
+
+/* Line 1455 of yacc.c  */
+#line 448 "main.y"
+    {printf("{*outside Rule*} statement ->  RETURN  : \n---------------------------------\n");;}
+    break;
+
+  case 211:
+
+/* Line 1455 of yacc.c  */
+#line 449 "main.y"
+    {printf("{*inside Rule*} statement ->  RETURN expr  : \n");;}
+    break;
+
+  case 212:
+
+/* Line 1455 of yacc.c  */
+#line 449 "main.y"
+    {quadReturn(); (yyval.TYPE_VOID) = (yyvsp[(2) - (3)].TYPE_NODE); printf("{*outside Rule*} statement ->  RETURN expr  : \n---------------------------------\n");;}
+    break;
+
+  case 213:
+
+/* Line 1455 of yacc.c  */
+#line 450 "main.y"
+    {printf("{*inside Rule*} statement ->  PRINT  '(' expr ')' : \n");;}
+    break;
+
+  case 214:
+
+/* Line 1455 of yacc.c  */
+#line 450 "main.y"
+    {printNode((yyvsp[(3) - (5)].TYPE_NODE));;}
+    break;
+
+  case 215:
+
+/* Line 1455 of yacc.c  */
+#line 450 "main.y"
+    {printf("{*outside Rule*} statement ->  PRINT  '(' expr ')': \n");;}
+    break;
+
+  case 216:
+
+/* Line 1455 of yacc.c  */
+#line 451 "main.y"
+    {printf("{*inside Rule*} statement ->  PRINT  '(' printList ')': \n");;}
+    break;
+
+  case 217:
+
+/* Line 1455 of yacc.c  */
+#line 451 "main.y"
+    {(yyval.TYPE_VOID) = (yyvsp[(3) - (5)].TYPE_NODE);  printNode(printStringValues); printf("{*outside Rule*} statement ->  PRINT  '(' printList ')': \n");;}
+    break;
+
+  case 218:
+
+/* Line 1455 of yacc.c  */
+#line 456 "main.y"
+    {printf("{*inside Rule*} statements -> statement ';' : \n---------------------------------\n");;}
+    break;
+
+  case 219:
+
+/* Line 1455 of yacc.c  */
+#line 456 "main.y"
+    {;;}
+    break;
+
+  case 220:
+
+/* Line 1455 of yacc.c  */
+#line 456 "main.y"
+    {printf("{*outside Rule*} statements -> statement ';' : \n");;}
+    break;
+
+  case 221:
+
+/* Line 1455 of yacc.c  */
+#line 457 "main.y"
+    {printf("{*inside Rule*} statements -> controlStatement  : \n---------------------------------\n");;}
+    break;
+
+  case 222:
+
+/* Line 1455 of yacc.c  */
+#line 457 "main.y"
+    {;;}
+    break;
+
+  case 223:
+
+/* Line 1455 of yacc.c  */
+#line 457 "main.y"
+    {printf("{*outside Rule*} statements -> controlStatement  : \n");;}
+    break;
+
+  case 224:
+
+/* Line 1455 of yacc.c  */
+#line 458 "main.y"
+    {printf("{*inside Rule*} statements -> statements statement ';'  : \n---------------------------------\n");;}
+    break;
+
+  case 225:
+
+/* Line 1455 of yacc.c  */
+#line 458 "main.y"
+    {;;}
+    break;
+
+  case 226:
+
+/* Line 1455 of yacc.c  */
+#line 458 "main.y"
+    {printf("{*outside Rule*} statements -> statements statement ';'  :   \n");;}
+    break;
+
+  case 227:
+
+/* Line 1455 of yacc.c  */
+#line 459 "main.y"
+    {enterScope();;}
+    break;
+
+  case 228:
+
+/* Line 1455 of yacc.c  */
+#line 459 "main.y"
+    {printf("{*inside Rule*} statements -> '{' codeBlock '}'   : \n");;}
+    break;
+
+  case 229:
+
+/* Line 1455 of yacc.c  */
+#line 459 "main.y"
+    {exitScope();;}
+    break;
+
+  case 230:
+
+/* Line 1455 of yacc.c  */
+#line 459 "main.y"
+    {printf("{*outside Rule*} statements -> '{' codeBlock '}' : \n---------------------------------\n");;}
+    break;
+
+  case 231:
+
+/* Line 1455 of yacc.c  */
+#line 460 "main.y"
+    {printf("{*inside Rule*} statements -> statements controlStatement : \n");;}
+    break;
+
+  case 232:
+
+/* Line 1455 of yacc.c  */
+#line 460 "main.y"
+    {printf("{*outside Rule*} statements -> statements controlStatement : \n---------------------------------\n");;}
+    break;
+
+  case 233:
+
+/* Line 1455 of yacc.c  */
+#line 461 "main.y"
+    {enterScope();;}
+    break;
+
+  case 234:
+
+/* Line 1455 of yacc.c  */
+#line 461 "main.y"
+    {printf("{*inside Rule*} statements -> statements '{' codeBlock '}'  : \n");;}
+    break;
+
+  case 235:
+
+/* Line 1455 of yacc.c  */
+#line 461 "main.y"
+    {exitScope();;}
+    break;
+
+  case 236:
+
+/* Line 1455 of yacc.c  */
+#line 461 "main.y"
+    {;;}
+    break;
+
+  case 237:
+
+/* Line 1455 of yacc.c  */
+#line 461 "main.y"
+    {printf("{*outside Rule*} statements -> statements '{' codeBlock '}'  : \n---------------------------------\n");;}
+    break;
+
+  case 238:
+
+/* Line 1455 of yacc.c  */
+#line 466 "main.y"
+    {printf("======================================\n");;}
+    break;
+
+  case 239:
+
+/* Line 1455 of yacc.c  */
+#line 466 "main.y"
+    {printf("{*inside Rule*} codeBlock -> statements ';' : \n");;}
+    break;
+
+  case 240:
+
+/* Line 1455 of yacc.c  */
+#line 466 "main.y"
+    {printf("{*outside Rule*} codeBlock -> statements ';' : \n---------------------------------\n");;}
+    break;
+
+  case 241:
+
+/* Line 1455 of yacc.c  */
+#line 471 "main.y"
+    {quadPopIdentifier((yyvsp[(2) - (2)].TYPE_STR));;}
+    break;
+
+  case 242:
+
+/* Line 1455 of yacc.c  */
+#line 471 "main.y"
+    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]) ;funcFirstarg=sym_table_idx-1;   argCount = sym_table_idx-argCount; setInit((yyvsp[(2) - (3)].TYPE_STR));;}
+    break;
+
+  case 243:
+
+/* Line 1455 of yacc.c  */
+#line 472 "main.y"
+    {quadPopIdentifier((yyvsp[(2) - (2)].TYPE_STR));;}
+    break;
+
+  case 244:
+
+/* Line 1455 of yacc.c  */
+#line 472 "main.y"
+    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]);setInit((yyvsp[(2) - (3)].TYPE_STR)); ;}
+    break;
+
+  case 246:
+
+/* Line 1455 of yacc.c  */
+#line 477 "main.y"
+    {quadStartFunction((yyvsp[(2) - (2)].TYPE_STR));;}
+    break;
+
+  case 247:
+
+/* Line 1455 of yacc.c  */
+#line 477 "main.y"
+    {checkSameScope((yyvsp[(2) - (3)].TYPE_STR)); insert((yyvsp[(2) - (3)].TYPE_STR), (yyvsp[(1) - (3)].TYPE_NODE)->type, 0, 0, 0, scopes[scope_idx-1]); argCount = sym_table_idx; enterScope(); setInit((yyvsp[(2) - (3)].TYPE_STR));;}
+    break;
+
+  case 248:
+
+/* Line 1455 of yacc.c  */
+#line 478 "main.y"
+    {printf("here \n");;}
+    break;
+
+  case 249:
+
+/* Line 1455 of yacc.c  */
+#line 478 "main.y"
+    {exitScope(); quadEndFunction((yyvsp[(2) - (9)].TYPE_STR)); updateSymbolParam((yyvsp[(2) - (9)].TYPE_STR), argCount);;}
+    break;
+
+  case 250:
+
+/* Line 1455 of yacc.c  */
+#line 480 "main.y"
+    {printf("definitions with params  \n");;}
+    break;
+
+  case 251:
+
+/* Line 1455 of yacc.c  */
+#line 481 "main.y"
     {printf("definitions without params  \n");;}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 3338 "main.tab.c"
+#line 3747 "main.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -3546,11 +3955,11 @@ yyreturn:
 
 
 /* Line 1675 of yacc.c  */
-#line 432 "main.y"
+#line 488 "main.y"
 
 
 void yyerror(char *s) {
-    fprintf(stderr, "%s\n", s);
+    fprintf(stderr, "%s at line %d \n", s,line);
 }
 
 
@@ -3564,15 +3973,6 @@ struct nodeType* createIntNode(int value) {
     return node;
 }
 
-// Create String Node
-
-struct nodeType* createStringNode(char* value) {
-    printf("{*inside Function*} createStringNode(char* value = %s): \n",value);
-    struct nodeType* node = malloc(sizeof(struct nodeType));
-    node->type = "string";
-    node->isConst = 0;
-    node->value.stringVal = strdup(value);
-}
 // Create Node
 struct nodeType* createNode(char* type) {
     printf("{*inside Function*} createNode(char* type = %s): \n",type);
@@ -3587,7 +3987,11 @@ struct nodeType* createNode(char* type) {
 // Op functions 
 //-------------------------------------------------------------------------------  
 
-struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement //Log_SEMANTIC_ERROR(TYPE_MISMATCH)
+struct nodeType* castingTo(struct nodeType* term, char *type){ 
+    if (term == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return NULL;
+    }
     printf("{*inside Function*} castingTo(struct nodeType* term = %s NodeType, char *type = %s) :\n", term->type , type);
     struct nodeType* casted_ptr = malloc(sizeof(struct nodeType));
     casted_ptr->isConst = term->isConst;
@@ -3600,13 +4004,26 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
             casted_ptr->value.intVal = (int)term->value.boolVal;
         }
         else if(strcmp(term->type, "string") == 0){
+            //TODO: More checking for printf("strlen(string_without_quotes) => %d\n",strlen(string_without_quotes)); != char string_without_quotes[string_length]; & check //If the conversion is not valid, the function returns 0.
             // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            casted_ptr->value.intVal = atoi(str);
+            char *string_with_quotes = strdup(term->value.stringVal);
+            //printf("string_with_quotes: %s\n", string_with_quotes);
+            //printf("strlen(string_with_quotes) => %d\n",strlen(string_with_quotes));
+            int string_length = strlen(string_with_quotes) - 2; // remove 2 quotes
+            //printf("string_length => %d\n",string_length);
+            char string_without_quotes[string_length];
+            for(int i = 0; i < string_length; i++){
+                string_without_quotes[i] = string_with_quotes[i+1];
+            }
+            //printf("string_without_quotes :%s\n", string_without_quotes);
+            //printf("strlen(string_without_quotes) => %d\n",strlen(string_without_quotes));
+
+            //printf("atoi(string_without_quotes) => %d\n", atoi(string_without_quotes));
+            casted_ptr->value.intVal = atoi(string_without_quotes); //If the conversion is not valid, the function returns 0.
+            //printf("else if(strcmp(term->type, string) == 0)  str=> %s , casted_ptr->value.intVal => %d\n", string_without_quotes,casted_ptr->value.intVal);
         }
         else{
-            /* printf("Invalid type\n"); */
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+            casted_ptr->value.intVal = term->value.intVal;
         }
     }
     else if(strcmp(type, "float") == 0){  // convert to float
@@ -3619,17 +4036,22 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
         }
         else if(strcmp(term->type, "string") == 0){
             // remove double quotes from start and end of string
-            char *str = strdup(term->value.stringVal);
-            casted_ptr->value.floatVal = atof(str);
+            char *string_with_quotes = strdup(term->value.stringVal);
+            int string_length = strlen(string_with_quotes) - 2; // remove 2 quotes
+            char string_without_quotes[string_length];
+            for(int i = 0; i < string_length; i++){
+                string_without_quotes[i] = string_with_quotes[i+1];
+            }
+            casted_ptr->value.floatVal = atof(string_without_quotes); //If the conversion is not valid, the function returns 0.
         }
         else{
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+            casted_ptr->value.floatVal =  term->value.floatVal;
         }
     }
     else if(strcmp(type, "bool") == 0){  // convert to bool
         casted_ptr->type = "bool";
         if(strcmp(term->type, "int") == 0){
-            casted_ptr->value.boolVal = (int)term->value.intVal != 0;
+            casted_ptr->value.boolVal = term->value.intVal != 0;
         }
         else if(strcmp(term->type, "float") == 0){
             casted_ptr->value.boolVal = (int)term->value.floatVal !=0 ;
@@ -3637,15 +4059,15 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
         else if(strcmp(term->type, "string") == 0){
             // remove double quotes from start and end of string
             char *str = strdup(term->value.stringVal);
-            if (strcmp("", str) == 0) {//Only EMPTY string
-                casted_ptr->value.boolVal = 1;
+            if (strlen(str) == 2) {//Only EMPTY string
+                casted_ptr->value.boolVal = 0;
             }
             else{
-                casted_ptr->value.boolVal = 0;
+                casted_ptr->value.boolVal = 1;
             }
         }
         else{
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+            casted_ptr->value.boolVal =  term->value.boolVal;
         }
     }
     else if(strcmp(type, "string") == 0){ // convert to string
@@ -3666,7 +4088,7 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
             casted_ptr->value.stringVal = strdup(t);
         }
         else{
-            //Log_SEMANTIC_ERROR(TYPE_MISMATCH, term->type);
+            casted_ptr->value.stringVal =  term->value.stringVal;
         }
     } 
     return casted_ptr;    
@@ -3674,120 +4096,252 @@ struct nodeType* castingTo(struct nodeType* term, char *type){ //TODO: Implement
 
 
 // Arithmatic
-struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op){
+struct nodeType* arithmatic(struct nodeType* op1, struct nodeType*op2, char* op){ //TODO: Handle divide by zero
+    if (op1 == NULL || op2 == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return NULL;
+    }
     printf("{*inside Function*} arithmatic(struct nodeType* op1 = %s NodeType,struct nodeType* op2 = %s NodeType, char *op = %s) :\n", op1->type ,op2->type , op);
+    if(strcmp(op1->type, op2->type) != 0) {
+        Show_Semantic_Error(TYPE_MISMATCH, ""); 
+    }
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
     
-    if(strcmp(op1->type, "int") == 0){
-        if(op2->type == "float"){
-            struct nodeType* float_op1 = malloc(sizeof(struct nodeType));
-            float_op1 = castingTo(op1,"float");
-            final_result->type = "float";
-            
-            if(strcmp(op, "+") == 0){
-                final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
-                }
-            else if(strcmp(op, "-") == 0){
-                final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
-                }
-            else if(strcmp(op, "*") == 0){
-                final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
-                }
-            else if(strcmp(op, "/") == 0){
-                final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
-                }   
-               
-        }
-        else{
-            struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
+    printf("DEBUG: HERE ARITHEMATIC whileLoopFound %d , whileLoopCnt = %d\n ",whileLoopFound,whileLoopCnt);
+    if(whileLoopFound==1){
+      
+        if(strcmp(op1->type, "int") == 0){
+            final_result->value.intVal = 0;
+             final_result->type = "int";
+             int acc=0;
+              struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
             int_op2 = castingTo(op2,"int");
-            final_result->type = "int";
+       for (int i=0;i<whileLoopCnt;i++){
+           
+           
             
             if(strcmp(op, "+") == 0){
-                final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
+                printf("op1->value.intVal = %d\n",op1->value.intVal);
+                printf("int_op2->value.intVal = %d\n",int_op2->value.intVal);
+                acc =acc+ op1->value.intVal + int_op2->value.intVal;
+                printf("final_result->value.intVal = %d\n",final_result->value.intVal);
                 }
-            else if(strcmp(op, "-") == 0){
+       }
+      
+             if(strcmp(op, "-") == 0){
                 final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
                 }
             else if(strcmp(op, "*") == 0){
+                if (((op1->isConst == 1) && (op1->value.intVal == 0)) || ((int_op2->isConst == 1) && (int_op2->value.intVal == 0))) {
+                    final_result->isConst = 1;
+                }                
                 final_result->value.intVal = op1->value.intVal * int_op2->value.intVal;
                 }
             else if(strcmp(op, "/") == 0){
+                if ((op1->isConst == 1) && (op1->value.intVal == 0)) {
+                    final_result->isConst = 1;
+                }                 
                 final_result->value.intVal = op1->value.intVal / int_op2->value.intVal;
                 }  
             else if(strcmp(op, "%") == 0){
+                if ((op1->isConst == 1) && (op1->value.intVal == 0)) {
+                    final_result->isConst = 1;
+                }                  
                 final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
+            
             } 
+             final_result->value.intVal = acc;
+
              
-        }
-    }
-    else if(strcmp(op1->type, "float") == 0){
-        struct nodeType* float_op2 = malloc(sizeof(struct nodeType));
-        float_op2 = castingTo(op1,"float");
-        final_result->type = "float";
-        
-        if(strcmp(op, "+") == 0){
-            final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "-") == 0){
-            final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "*") == 0){
-            final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
-            }
-        else if(strcmp(op, "/") == 0){
-            final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
-            }     
     
-    }
-    else if(strcmp(op1->type, "bool") == 0){
-        struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
-        bool_op2 = castingTo(op1,"bool");
-        final_result->type = "bool";
-         //TODO: check
-        if(strcmp(op, "+") == 0){
-            final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "-") == 0){
-            final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "*") == 0){
-            final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
-            }
-        else if(strcmp(op, "/") == 0){
-            final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
-            }     
-    
-    }
-    else if(strcmp(op1->type, "string") == 0){
-        struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
-        string_op2 = castingTo(op1,"string");
-        final_result->type = "string";
-         //TODO: check
-        if(strcmp(op, "+") == 0){{
-            char* str1 = op1->value.stringVal;
-            strcat(str1, string_op2->value.stringVal);
-            final_result->value.stringVal = str1;
-            }
         }
-        else if(strcmp(op, "-") == 0){
-        }
-        else if(strcmp(op, "*") == 0){
-        }
-        else if(strcmp(op, "/") == 0){
-        }     
-    
     }
     else{
-        ////Log_SEMANTIC_ERROR(TYPE_MISMATCH)
+        if(strcmp(op1->type, "int") == 0){
+            if(op2->type == "float"){
+                struct nodeType* float_op1 = malloc(sizeof(struct nodeType));
+                float_op1 = castingTo(op1,"float");
+                final_result->type = "float";
+                
+                if(strcmp(op, "+") == 0){
+                    final_result->value.floatVal = float_op1->value.floatVal + op2->value.floatVal;
+                    }
+                else if(strcmp(op, "-") == 0){
+                    final_result->value.floatVal = float_op1->value.floatVal - op2->value.floatVal;
+                    }
+                else if(strcmp(op, "*") == 0){
+                    if (((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) || ((op2->isConst == 1) && (op2->value.floatVal == 0))) {
+                        final_result->isConst = 1;
+                    }
+                    final_result->value.floatVal = float_op1->value.floatVal * op2->value.floatVal;
+                    }
+                else if(strcmp(op, "/") == 0){
+                    if ((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) {
+                        final_result->isConst = 1;
+                    }                
+                    final_result->value.floatVal = float_op1->value.floatVal / op2->value.floatVal;
+                    }
+                else if(strcmp(op, "%") == 0){   
+                    Show_Semantic_Error(TYPE_MISMATCH, "");
+                    if ((float_op1->isConst == 1) && (float_op1->value.floatVal == 0)) {
+                        final_result->isConst = 1;
+                    }                     
+                    final_result->value.intVal = op1->value.intVal;
+                    } 
+
+                
+            }
+            else{
+                struct nodeType*int_op2 = malloc(sizeof(struct nodeType));
+                int_op2 = castingTo(op2,"int");
+                final_result->type = "int";
+                
+                if(strcmp(op, "+") == 0){
+                    final_result->value.intVal = op1->value.intVal + int_op2->value.intVal;
+                    }
+                else if(strcmp(op, "-") == 0){
+                    final_result->value.intVal = op1->value.intVal - int_op2->value.intVal;
+                    }
+                else if(strcmp(op, "*") == 0){
+                    if (((op1->isConst == 1) && (op1->value.intVal == 0)) || ((int_op2->isConst == 1) && (int_op2->value.intVal == 0))) {
+                        final_result->isConst = 1;
+                    }                
+                    final_result->value.intVal = op1->value.intVal * int_op2->value.intVal;
+                    }
+                else if(strcmp(op, "/") == 0){
+                    if ((op1->isConst == 1) && (op1->value.intVal == 0)) {
+                        final_result->isConst = 1;
+                    }                 
+                    final_result->value.intVal = op1->value.intVal / int_op2->value.intVal;
+                    }  
+                else if(strcmp(op, "%") == 0){
+                    if ((op1->isConst == 1) && (op1->value.intVal == 0)) {
+                        final_result->isConst = 1;
+                    }                  
+                    final_result->value.intVal = op1->value.intVal % int_op2->value.intVal;
+                } 
+                
+            }
+        }
+        else if(strcmp(op1->type, "float") == 0){
+            struct nodeType* float_op2 = malloc(sizeof(struct nodeType));
+            float_op2 = castingTo(op1,"float");
+            final_result->type = "float";
+            
+            if(strcmp(op, "+") == 0){
+                final_result->value.floatVal = op1->value.floatVal + float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "-") == 0){
+                final_result->value.floatVal = op1->value.floatVal - float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "*") == 0){
+                if (((op1->isConst == 1) && (op1->value.floatVal == 0)) || ((float_op2->isConst == 1) && (float_op2->value.floatVal == 0))) {
+                    final_result->isConst = 1;
+                }            
+                final_result->value.floatVal = op1->value.floatVal * float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "/") == 0){
+                if ((op1->isConst == 1) && (op1->value.floatVal == 0)) {
+                    final_result->isConst = 1;
+                }            
+                final_result->value.floatVal = op1->value.floatVal / float_op2->value.floatVal;
+                }
+            else if(strcmp(op, "%") == 0){   
+                Show_Semantic_Error(TYPE_MISMATCH, "");
+                if ((op1->isConst == 1) && (op1->value.floatVal == 0)) {
+                    final_result->isConst = 1;
+                }              
+                final_result->value.floatVal = op1->value.floatVal ; 
+            }      
+        
+        }
+        else if(strcmp(op1->type, "bool") == 0){
+            struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
+            bool_op2 = castingTo(op1,"bool");
+            final_result->type = "bool";
+            //TODO: check
+            if(strcmp(op, "+") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
+                    final_result->isConst = 1;
+                }              
+                final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "-") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
+                    final_result->isConst = 1;
+                }                 
+                final_result->value.boolVal = op1->value.boolVal || bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "*") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
+                    final_result->isConst = 1;
+                }
+                final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "/") == 0){
+                if (((op1->isConst == 1) && (op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
+                    final_result->isConst = 1;
+                }            
+                final_result->value.boolVal = op1->value.boolVal && bool_op2->value.boolVal;
+                }
+            else if(strcmp(op, "%") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                if ((op1->isConst == 1) && (op1->value.boolVal == 0)) {
+                    final_result->isConst = 1;
+                }              
+                final_result->value.boolVal = op1->value.boolVal;
+            }     
+        
+        }
+        else if(strcmp(op1->type, "string") == 0){
+            struct nodeType* string_op2 = malloc(sizeof(struct nodeType));
+            string_op2 = castingTo(op2,"string");
+            final_result->type = "string";
+            //TODO: check
+            if(strcmp(op, "+") == 0){
+                char* str1 = op1->value.stringVal;
+                strcat(str1, string_op2->value.stringVal);
+                final_result->value.stringVal = str1;    
+            }
+            else if(strcmp(op, "-") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            }
+            else if(strcmp(op, "*") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            }
+            else if(strcmp(op, "/") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            } 
+            else if(strcmp(op, "%") == 0){
+                Show_Semantic_Error(TYPE_MISMATCH, ""); 
+                final_result->value.stringVal = op1->value.stringVal;
+            }    
+        
+        }
     }
     return final_result;
 }
 
 // Comparison
 struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* op){
+    if(strcmp(op,"<")==0){
+        forLoopCnt=op2->value.intVal-op1->value.intVal;
+        printf("forLoopCnt: %d\n",forLoopCnt);
+        whileLoopCnt=op2->value.intVal-op1->value.intVal;
+        printf("whileLoopCnt: %d\n",whileLoopCnt);
+    }
+    if (op1 == NULL || op2 == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return NULL;
+    }
     printf("{*inside Function*} doComparison(struct nodeType* op1 = %s NodeType,struct nodeType* op2 = %s NodeType, char *op = %s) :\n", op1->type ,op2->type , op);
+    if(strcmp(op1->type, op2->type) != 0) {
+        Show_Semantic_Error(TYPE_MISMATCH, ""); 
+    }    
     struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
     bool_op1 = castingTo(op1,"bool");
     struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
@@ -3796,38 +4350,83 @@ struct nodeType* doComparison(struct nodeType* op1, struct nodeType*op2, char* o
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->isConst=((op1->isConst)&&(op2->isConst));
     final_result->type = "bool";
- 
+    int foundMatch=0;
     if(strcmp(op, "==") == 0){
-        final_result->value.boolVal = op1->value.boolVal == op2->value.boolVal;
+        printf("OMAR op1->value.intVal = %d\n",op1->value.intVal);
+        printf("OMAR op2->value.intVal = %d\n",op2->value.intVal);
+
+        if(op1->value.intVal == op2->value.intVal)
+            final_result->value.boolVal = 1;
+        else
+            final_result->value.boolVal = 0;
+        
+        printf("OMAR final_result->value.boolVal = %d\n",final_result->value.boolVal);
+        
     }
     else if(strcmp(op, "!=") == 0){
         final_result->value.boolVal = op1->value.boolVal != op2->value.boolVal;
+        foundMatch=1;
     }
     else if(strcmp(op, "<") == 0){
+        printf("DEBUG OMAR\n");
+        printf("op1->value.boolVal = %d\n",op1->value.boolVal);
+        printf("op2->value.boolVal = %d\n",op2->value.boolVal);
         final_result->value.boolVal = op1->value.boolVal < op2->value.boolVal;
+        printf("final_result->value.boolVal = %d\n",final_result->value.boolVal);
+        foundMatch=1;
     }
     else if(strcmp(op, ">") == 0){
-        final_result->value.boolVal = op1->value.boolVal > op2->value.boolVal;
+        printf("OMAR op1->value.boolVal = %d\n",op1->value.boolVal);
+        printf("OMAR op2->value.boolVal = %d\n",op2->value.boolVal);
+        if(op1->value.boolVal > op2->value.boolVal)
+             final_result->value.boolVal = 1;
+        else
+            final_result->value.boolVal = 0;
+        printf("OMAR final_result->value.boolVal = %d\n",final_result->value.boolVal);
+        foundMatch=1;
     }
     else if(strcmp(op, "<=") == 0){
         final_result->value.boolVal = op1->value.boolVal <= op2->value.boolVal;
+        foundMatch=1;
+
     }
     else if(strcmp(op, ">=") == 0){
         final_result->value.boolVal = op1->value.boolVal >= op2->value.boolVal;
+        foundMatch=1;
+
+    }
+    if (final_result->value.boolVal==1&&ifCon==1){
+        foundMatch=0;
+        ifConMatch=1;
+      
     }
     else{
-        //Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
+        ifConMatch=0;
+    }
+    if(switchC==1&&final_result->value.boolVal==1){
+        switchMatch=1;
+    }
+    if(forLoopFound==1&&final_result->value.boolVal==0){
+        forLoopCnt=0;
     }
     return final_result;
 }
 
 // Logical
 struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op){
+    if (op1 == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return NULL;
+    }
     struct nodeType* bool_op1 = malloc(sizeof(struct nodeType));
     bool_op1 = castingTo(op1,"bool");
+    printf("bool_op1 = %d\n",bool_op1->value.boolVal);
     struct nodeType* bool_op2 = malloc(sizeof(struct nodeType));
     if (op2 != NULL){
         printf("{*inside Function*} logical(struct nodeType* op1 = %s NodeType,struct nodeType* op2 = %s NodeType, char *op = %s) :\n", op1->type ,op2->type , op);
+        if(strcmp(op1->type, op2->type) != 0) {
+            Show_Semantic_Error(TYPE_MISMATCH, ""); 
+        }
         bool_op2 = castingTo(op2,"bool");  
     }
     else{
@@ -3836,25 +4435,46 @@ struct nodeType* logical(struct nodeType* op1, struct nodeType* op2, char* op){
     }
     
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
-    final_result->isConst=((op1->isConst)&&(op2->isConst));
     final_result->type = "bool";
-    
-    if(strcmp(op, "!") == 0){
-        final_result->value.boolVal = !op1->value.boolVal;
-    }
-    else if(strcmp(op, "&") == 0){
-        final_result->value.boolVal = op1->value.boolVal && op2->value.boolVal;
-    }
-    else if(strcmp(op, "|") == 0){
-        final_result->value.boolVal = op1->value.boolVal || op2->value.boolVal;
+    if(op2 == NULL){
+        final_result->isConst=(op1->isConst);
     }
     else{
-        //Log_SEMANTIC_ERROR(INVALID_OPERATOR, op);
+        final_result->isConst=((op1->isConst)&&(op2->isConst));
+    }
+    
+    
+    if(strcmp(op, "!") == 0){
+        final_result->value.boolVal = (! (bool_op1->value.boolVal));
+    }
+    else if(strcmp(op, "&") == 0){
+        if (bool_op2 == NULL) {
+            printf("Syntax Error: NULL pointer Referencing.\n");
+            return NULL;
+        }
+        if (((bool_op1->isConst == 1) && (bool_op1->value.boolVal == 0)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 0))) {
+            final_result->isConst = 1;
+        }
+        final_result->value.boolVal = bool_op1->value.boolVal && bool_op2->value.boolVal;
+    }
+    else if(strcmp(op, "|") == 0){
+        if (bool_op2 == NULL) {
+            printf("Syntax Error: NULL pointer Referencing.\n");
+            return NULL;
+        }
+        if (((bool_op1->isConst == 1) && (bool_op1->value.boolVal == 1)) || ((bool_op2->isConst == 1) && (bool_op2->value.boolVal == 1))) {
+            final_result->isConst = 1;
+        }                
+        final_result->value.boolVal = bool_op1->value.boolVal || bool_op2->value.boolVal;
     }
 }
 
 // Unary
 struct nodeType* Negation(struct nodeType* term){
+    if (term == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return NULL;
+    }
     printf("{*inside Function*} Negation(struct nodeType* term = %s NodeType) :\n", term->type);
     struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->type = term->type;
@@ -3865,6 +4485,19 @@ struct nodeType* Negation(struct nodeType* term){
     else if(strcmp(term->type, "float") == 0){
         final_result->value.floatVal = -term->value.floatVal;
     }
+    else if(strcmp(term->type, "bool") == 0){
+        if (term->value.boolVal == 0){
+            final_result->value.intVal = 0;
+        }
+        else {
+            final_result->value.intVal = -1;
+        }
+    }
+    else{
+        final_result->type = "int";
+        final_result->value.intVal = 0;
+        Show_Semantic_Error(TYPE_MISMATCH, "");
+    }
     return final_result;
 }
 
@@ -3872,35 +4505,46 @@ int computeIdentifierIndex(char* name){
     printf("{*inside Function*} computeIdentifierIndex(char* name = %s) :\n", name);
     int lvl;
     for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(symbol_Table[i].name == name) {
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
-            for(int j=scope_idx-1;j>=0;j--) {
-                if(lvl == scopes[j]) {
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Nearest Variable in current scope or in any downstream to base scope (0)
+                    printf("{*               *}  => Varible: {%s} Index in Symbol_Table= {%d}\n",name, i);
+                    printf("{*               *}  => Varible: {%s} Scope Level = {%d}\n",name, lvl);
                     return i;
                 }
             }
         }
     }
+    printf("Syntax Error:  => Ghost Varible: {%s} Scope Level = -1 {Not Found}\n",name);
+    Show_Semantic_Error(UNDECLARED, name);
     return -1;
 }
 
 void identifierNodeTypeCheck(char* name , struct nodeType* node){
+    if (node == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return ;
+    }
     printf("{*inside Function*} identifierNodeTypeCheck(char* name = %s, struct nodeType* node = %s NodeType) :\n", name ,node->type);
-    int identifier_sym_table_index = computeIdentifierIndex(name);
+    int identifier_sym_table_index = computeIdentifierIndex(name); 
     if (identifier_sym_table_index < 0){
-        //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
         return ;
     }
     
     if(strcmp(symbol_Table[identifier_sym_table_index].type, node->type) != 0) {
-        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, symbol_Table[identifier_sym_table_index].name);
+        Show_Semantic_Error(TYPE_MISMATCH, "");
     }
 }
 
 void nodeNodeTypeCheck(struct nodeType* node1, struct nodeType* node2){
+    if (node1 == NULL || node2 == NULL) {
+        //TODO: Show_Semantic_Error(NULL, "");
+        return ;
+    }
     printf("{*inside Function*} nodeNodeTypeCheck(struct nodeType* node1 = %s NodeType, struct nodeType* node2 = %s NodeType) :\n", node1->type, node2->type);
     if(strcmp(node1->type, node2->type) != 0) {
-        //Log_SEMANTIC_ERROR(TYPE_MISMATCH, node->type); 
+        Show_Semantic_Error(TYPE_MISMATCH, ""); 
     }
     return;
 }//
@@ -3916,32 +4560,53 @@ struct nodeType* identifierValue(char* name){
     printf("{*inside Function*} identifierValue(char* name = %s) :\n", name);
     int identifier_sym_table_index = computeIdentifierIndex(name);
     if (identifier_sym_table_index < 0){
-        //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
-        return NULL;
+        struct nodeType* final_result = malloc(sizeof(struct nodeType));
+        final_result->value.intVal = -1;
+        return final_result; //NULL;
     }
     
-    struct nodeType* final_result = malloc(sizeof(struct nodeType));;
+    struct nodeType* final_result = malloc(sizeof(struct nodeType));
     final_result->type = symbol_Table[identifier_sym_table_index].type;
     final_result->isConst = symbol_Table[identifier_sym_table_index].isConst;
 
-    if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0)
+    if(strcmp(symbol_Table[identifier_sym_table_index].type, "int") == 0){
         final_result->value.intVal = symbol_Table[identifier_sym_table_index].value.intVal;
-    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0)
+        printf("{*               *} Value() = { %d }\n", final_result->value.intVal);
+    }
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "float") == 0){
         final_result->value.floatVal = symbol_Table[identifier_sym_table_index].value.floatVal;
-    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0)
+        printf("{*               *} Value() = { %f }\n", final_result->value.floatVal);
+    }
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "bool") == 0){
         final_result->value.boolVal = symbol_Table[identifier_sym_table_index].value.boolVal;
-    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
+        printf("{*               *} Value() = { %d }\n", final_result->value.boolVal);
+    }
+    else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0){
         final_result->value.stringVal = symbol_Table[identifier_sym_table_index].value.stringVal;
-
+        printf("{*               *} Value()  = { %s }\n", final_result->value.stringVal);
+    }
+    
     return final_result;
 }  
 
 // This function call after check that Identifier(name) is same type as node type 
 void updateIdentifierValue(char* name, struct nodeType* node){
-    printf("{*inside Function*} updateIdentifierValue(char* name = %s, struct nodeType * node = %s NodeType)\n", name, node->type);
+    if(switchC=1&&switchMatch==2){
+        
+        return;
+    }
+    printf("DEBUG:  ifCon = %d ifConMatch = %d , fromElse= %d \n", ifCon,ifConMatch,fromElse);
+    if((ifCon == 1 && ifConMatch == 1&&fromElse==1)){
+       
+        return;
+    }
+    if (node == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return ;
+    }
+    printf("{*inside Function*} updateIdentifierValue(char* name = %s, struct nodeType * node = %s NodeType =>Value = {%s})\n", name, node->type,castingTo(node, "string")->value.stringVal);
     int identifier_sym_table_index = computeIdentifierIndex(name);
     if (identifier_sym_table_index < 0){
-        //Log_SEMANTIC_ERROR(UNDEFINED_VARIABLE, name);
         return;
     }
     
@@ -3953,6 +4618,10 @@ void updateIdentifierValue(char* name, struct nodeType* node){
         symbol_Table[identifier_sym_table_index].value.boolVal = castingTo(node, "bool")->value.boolVal;
     else if(strcmp(symbol_Table[identifier_sym_table_index].type, "string") == 0)
         symbol_Table[identifier_sym_table_index].value.stringVal = castingTo(node, "string")->value.stringVal;
+
+    if(switchC==1&&switchMatch==1){
+        switchMatch=2;
+    }
 }
 
 // char* valueString(struct nodeType* node){
@@ -3962,10 +4631,36 @@ void updateIdentifierValue(char* name, struct nodeType* node){
 // }
 
 void printNode(struct nodeType* node){
+    printf("DEBUG:  switchC = %d switchMatch = %d \n", switchC,switchMatch);
+    printf("DEBUG:  forLoopFound = %d forLoopCnt = %d \n", forLoopFound,forLoopCnt);
+    if(switchC==1&&switchMatch==2){
+        return;
+    }
+    if (node == NULL) {
+        printf("Syntax Error: NULL pointer Referencing.\n");
+        return ;
+    }
     printf("{*inside Function*} printNode(struct nodeType* node = %s NodeType)\n", node->type);
     struct nodeType* str_p = malloc(sizeof(struct nodeType));
     str_p = castingTo(node,"string");
-    printf( str_p->value.stringVal);  
+    if(forLoopFound==1){
+        forLoopFound=0;
+        for(int i=0;i<forLoopCnt;i++){
+            printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+        }
+    }
+    else if(whileLoopFound==1){
+       
+        for(int i=0;i<whileLoopCnt;i++){
+            printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+        }
+    }
+    else
+        printf( "{**Print Result**} :  { %s }.\n",str_p->value.stringVal);
+    printStringValues->value.stringVal = strdup("");  //Free for later use
+    if(switchC==1&&switchMatch==1){
+        switchMatch=2;
+    }
 }
 
     
@@ -3984,7 +4679,7 @@ void insert(char* name, char* type, int isConst, int isInit, int isUsed, int sco
     symbol_Table [sym_table_idx].scope = scope;
     ++sym_table_idx;
 
-    printf("SymbolTable() inserted: %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
+    //printf("SymbolTable() inserted: %s, declared:%d, intialized:%d, const:%d, Symbol table idx:%d\n", symbol_Table [sym_table_idx-1].name, symbol_Table [sym_table_idx-1].isDecl,symbol_Table [sym_table_idx-1].isInit, symbol_Table [sym_table_idx-1].isConst, sym_table_idx); 
 }
 // Enter the scope
 void enterScope() {
@@ -4005,97 +4700,147 @@ void cleanedUpScope(int scope_idx) {
 }
 // Exit the scope
 void exitScope() {
-    printf("{*inside Function*} exitScope() ");
+    printf("{*inside Function*} exitScope() \n");
     cleanedUpScope(scope_idx);
     scope_idx--;
 }
 // Check if the variable is declared in the same scope
-void checkSameScope(char* name) {
+int checkSameScope(char* name) {
     printf("{*inside Function*} checkSameScope(char* name = %s)\n", name );
     int lvl;
+    int updated_scope_level = scopes[scope_idx-1]; // For insertion of a new IDENTIFIER after Checking there no Redeclarion before
     for(int i=0; i<sym_table_idx ;i++) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0 ) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
-            if(lvl == scopes[scope_idx-1]) {
-                 printf("Error: variable %s already declared in the same scope\n", name); 
-              
+            if(lvl == scopes[scope_idx-1]) { //Check if a variable is declared in the current scope of program
+                printf("Syntax Error: Variable { %s } is already declared in the same scope.\n", name); 
+                Show_Semantic_Error(REDECLARED, name);
+                // Ghost Varible
+                updated_scope_level = -1;     // -1: means was in scope but cleaned ,but, 0: means no scope  
+                return updated_scope_level;
             }
         }
     }
+    return updated_scope_level;
 }
 
 // Check if the variable is undeclared or removed out of scope
-void checkOutOfScope(char* name) {
-    printf("{*inside Function*} checkOutOfScope(char* name = %s)\n", name );
+int checkUndeclared_and_OutOfScope(char* name) {
+    printf("{*inside Function*} checkUndeclared_and_OutOfScope(char* name = %s)\n", name );
     int lvl;
-    for(int i=sym_table_idx-1; i>=0 ;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+    int Out_of_scope = 0;
+    int not_declared = 1;
+    for(int i=sym_table_idx-1; i>=0 ;i--) { //Start Search from {sym_table_idx} which represent current count of Variabls in  symbol_Table, its index = {sym_table_idx -1} which start at 0 means that exist only 1 variable in symbol_Table list
+
+        //printf("Symbol Instance :%s\n",symbol_Table[i].name);
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
+            not_declared = 0; //Already Declared
             lvl = symbol_Table[i].scope;
-            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
+            //printf("lvl : %d\n",lvl);
+            for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program and Similar to it downstream to base scope (0)
+                //printf("scopes[j] : %d\n",scopes[j]);
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
-                    return;
+                    return Out_of_scope;
                 }
             }
+            printf("Syntax Error: Variable { %s } is declared out of scope.\n", name);  
+            Show_Semantic_Error(OUT_OF_SCOPE, name);       
         }
     }
-    printf("Error: variable %s is out of scope\n", name);
-
+    if(not_declared == 1) {
+        printf("Syntax Error: Variable { %s } is not declared before.\n", name);
+        Show_Semantic_Error(UNDECLARED, name);
+    }
+    Out_of_scope = 1;
+    return Out_of_scope; 
 }
 
 
 // this function checks if a variable is used before initialized
-void checkInitialized(char* name) {
+int checkInitialized(char* name) {
     printf("{*inside Function*} checkInitialized(char* name = %s)\n", name );
     int lvl;
-    for(int i=sym_table_idx-1;i>=0;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+    int Initialized = 0;
+    for(int i=sym_table_idx-1;i>=0;i--) {//Start Search from {sym_table_idx} which represent current count of Variabls in  symbol_Table, its index = {sym_table_idx -1} which start at 0 means that exist only 1 variable in symbol_Table list
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
                     if(symbol_Table[i].isInit == 1) {
                         //Every thing is OK
-                        return;
+                        Initialized = 1;
+                        return Initialized;
                     }
                 }
             }
         }
     }
-    printf("Error: variable %s is used before initialized\n", name);
+    printf("Syntax Error: Variable { %s } is used before initialized.\n", name);
+    Show_Semantic_Error(UNINITIALIZED, name);
+    return Initialized;
 }
 
-// Check if the node is constant or not
-void checkConst(char* name) {
+// Check if the variable is constant or not
+int checkConst(char* name) {
+    int constant = 0;
+    int lvl;
     printf("{*inside Function*} checkConst(char* name = %s)\n", name );
-    for(int i=0; i<sym_table_idx ;i++) {
-        if(symbol_Table[i].name == name) {
-             for(int j=scope_idx-1;j>=0;j--) {
-                if(symbol_Table[i].scope == scopes[j]) {
+    for(int i=sym_table_idx-1; i>=0 ;i--) { //Start Search from {sym_table_idx} which represent current count of Variabls in  symbol_Table, its index = {sym_table_idx -1} which start at 0 means that exist only 1 variable in symbol_Table list
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
+            lvl = symbol_Table[i].scope;
+            for(int j=scope_idx-1;j>=0;j--) {//Loop through current scope of program downstream to base scope (0)
+                if(lvl == scopes[j]) { //Find Only Nearest Variable in current scope or in any downstream to base scope (0)
                     if(symbol_Table[i].isConst == 1) {
-                        printf("Error: variable %s is constant\n", name);
+                        printf("Syntax Error: Variable { %s } is constant.\n", name);
+                        Show_Semantic_Error(CONSTANT, name);
+                        constant = 1;
+                        return constant;
                     }
                     else{
-                        printf("Variable %s is not constant\n", name);
-                        return;
+                        //printf("Variable %s is not constant\n", name);
+                        return constant;
                     }
                 }
               }
         }
     }
+    return constant;
 }
 //check if the if conditions is constant or not
-void checkConstIF(struct nodeType* node){
-    printf("{*inside Function*} checkConstIF(struct nodeType* node = %s NodeType \n", node->type);
-    if(node->isConst==1){
-        semanticError(CONSTANT_IF, node->type/*node->value.boolVal !=0*/); //TODO: check warning about expected 'char *' but argument is of type 'int'
+void checkConstIF(struct nodeType* exprNode){
+    printf("{*inside Function*} checkConstIF(struct nodeType* node = %s NodeType \n", exprNode->type);
+    if(exprNode->isConst==1){
+        struct nodeType* bool_exprNode = malloc(sizeof(struct nodeType));
+        bool_exprNode = castingTo(exprNode,"bool");
+        Show_Semantic_Error(CONSTANT_IF, bool_exprNode->value.boolVal);
     }
 
 }
 
 // Print the symbol table
 void printSymbolTable() {
-    printf("{*inside Function*} printSymbolTable() \n");
+    
     for(int i=0; i<sym_table_idx ;i++) {
-        printf("SymbolTable() : %s, declared:%d, const:%d, Symbol table idx:%d\n", symbol_Table [i].name, symbol_Table [i].isDecl, symbol_Table [i].isConst, i); 
+        char* str_value = "";
+        if(strcmp(symbol_Table[i].type, "int") == 0){
+            char t[100];
+            sprintf(t, "%d", symbol_Table [i].value.intVal);
+            str_value = strdup(t);
+        }
+        else if(strcmp(symbol_Table[i].type, "float") == 0){
+            char t[100];
+            sprintf(t, "%f", symbol_Table [i].value.floatVal);
+            str_value = strdup(t);
+        }
+        else if(strcmp(symbol_Table[i].type, "bool") == 0){
+            char t[100];
+            sprintf(t, "%d", symbol_Table [i].value.boolVal);
+            str_value = strdup(t);
+        }
+        else if(strcmp(symbol_Table[i].type, "string") == 0){
+            str_value = symbol_Table [i].value.stringVal;
+        }
+        printf("SymbolTable() : Name: { %s }, Type: { %s }, Value: { %s }, isDeclared: { %d }, isConst: { %d }, isInit: { %d }, isUsed: { %d }, Symbol table idx: { %d } , Scope Level: { %d }\n", symbol_Table [i].name, symbol_Table [i].type, str_value, symbol_Table [i].isDecl, symbol_Table [i].isConst,symbol_Table [i].isInit, symbol_Table [i].isUsed, i,symbol_Table [i].scope); 
     }
 }
 
@@ -4107,7 +4852,7 @@ void setInit(char* name) {
     printf("{*inside Function*} setInit(char* name = %s)\n", name );
     int lvl;
     for(int i=sym_table_idx-1;i>=0;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
@@ -4123,7 +4868,7 @@ void setUsed(char* name) {
     printf("{*inside Function*} setUsed(char* name = %s)\n", name );
     int lvl;
     for(int i=sym_table_idx-1;i>=0;i--) {
-        if(symbol_Table[i].name == name) { //checks if a Variable is declared before 
+        if(strcmp(symbol_Table[i].name ,name)==0) { //checks if a Variable is declared before 
             lvl = symbol_Table[i].scope;
             for(int j=scope_idx-1;j>=0;j--) { //Loop through current scope of program downstream to base scope (0)
                 if(lvl == scopes[j]) { //Find Variable in current scope or in any downstream to base scope (0)
@@ -4136,24 +4881,33 @@ void setUsed(char* name) {
     }    
 }
 
+// this function checks that all variables are used
+void UnusedVaribles() {
+    for(int i=0;i<sym_table_idx;i++) {
+        if(symbol_Table[i].isUsed == 0) {
+            Show_Semantic_Error(UNUSED, symbol_Table[i].name);
+        }
+    }
+}
+
 ////////////////  QUAD GENERATION //////////////////////
 
 void quadStartFunction(char* function) // TODO: make it string isnetad of char
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tPROC %c\n", line, function);
+                printf("Quads(%d) \tPROC %s\n", line, function);
         }
 }
 void quadEndFunction(char* function)
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tENDPROC %c\n", line, function);
+                printf("Quads(%d) \tENDPROC %s\n", line, function);
         }
 }
 void quadCallFunction(char* function)
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tCALL %c\n", line, function);
+                printf("Quads(%d) \tCALL %s\n", line, function);
         }
 }
 void quadReturn()
@@ -4184,7 +4938,7 @@ void quadPushFloat(float val)
 void quadPushIdentifier(char* symbol)
 {
        if (SHOW_Quads) {
-               printf("Quads(%d) \tPUSH %c\n", line, symbol);
+               printf("Quads(%d) \tPUSH %s\n", line, symbol);
        }
 }
 void quadPushString(char* str)
@@ -4196,7 +4950,7 @@ void quadPushString(char* str)
 void quadPopIdentifier(char* symbol)
 {
        if (SHOW_Quads) {
-            printf("Quads(%d) \tPOP %c\n\n", line, symbol);
+            printf("Quads(%d) \tPOP %s\n\n", line, symbol);
        }
 }
 void quadPushEndLabel(int endLabelNum)
@@ -4258,7 +5012,7 @@ void quadPeakLastIdentifierStack(){
     /* get the last identifier from the stack */
     char* identifier = lastIdentifierStack[lastIdentifierStackPointer];
     if (SHOW_Quads) {
-            printf("Quads(%d) \tPUSH %c\n", line, identifier);
+            printf("Quads(%d) \tPUSH %s\n", line, identifier);
     }
 }
 void quadPopLastIdentifierStack(){
@@ -4299,13 +5053,13 @@ void quadPopStartLabel(){
 void quadStartEnum(char* enumName) 
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tENUM %c\n", line, enumName);
+                printf("Quads(%d) \tENUM %s\n", line, enumName);
         }
 }
 void quadEndEnum(char* enumName) 
 {
         if (SHOW_Quads) {
-                printf("Quads(%d) \tENDENUM %c\n", line, enumName);
+                printf("Quads(%d) \tENDENUM %s\n", line, enumName);
         }
 }
 
@@ -4313,11 +5067,18 @@ void quadEndEnum(char* enumName)
 
 int main(void) {
     //enumValues = createIntNode(0); //TODO: test this
-    //printStringValues = createStringNode("");
-        //intialize the scopes table 
+    // createStringNode("");
+    printStringValues = malloc(sizeof(struct nodeType));
+    printStringValues->type = "string";
+    printStringValues->isConst = 0;
+    printStringValues->value.stringVal = strdup("");
+    //////////
+    //intialize the scopes table 
     for (int i = 0; i < 100; i++) {
         scopes[i] = 0; //default scope = 0 (No scope)
     }
     yyparse();
+    UnusedVaribles();
+    printSymbolTable();
     return 0;
 }

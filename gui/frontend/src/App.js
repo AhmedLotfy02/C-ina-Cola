@@ -13,6 +13,7 @@ function App() {
     // const [variableErrors, setVariableErrors] = useState([]);
     const [quadsLines, setQuadsLines] = useState([]);
     const [symbolTable, setSymbolTable] = useState([]);
+    const [outputP, setOutputpanel] = useState([]);
 
 
 
@@ -29,15 +30,16 @@ function App() {
     
     const filterErrors = (output) => {
       const lines = output.split('\n');
-      const filteredLines = lines.filter(line => !line.includes('Semantic Error') && !line.startsWith('Error: ') && !line.startsWith('Error: variable') && !line.includes('Quads')&& 
+      const filteredLines = lines.filter(line => !line.includes('Semantic Error')&& !line.includes('Print Result') && !line.startsWith('Error: ') && !line.startsWith('Error: variable') && !line.includes('Quads')&& 
       !line.startsWith('SymbolTable')
-);
+    );
       setOutput(filteredLines.join('\n'));
 
       filterSemanticErrors(output);
       filterSyntaxErrors(output);
       filterQuadsLines(output);
       filterSymbolTable(output);
+      filterOutLines(output);
 
   };
 
@@ -53,7 +55,7 @@ function App() {
 };
   const filterSyntaxErrors = (output) => {
       const lines = output.split('\n');
-      const syntaxErrorLines = lines.filter(line => line.startsWith('Error: '));
+      const syntaxErrorLines = lines.filter(line => line.startsWith('Syntax'));
       setSyntaxErrors(syntaxErrorLines);
   };
   const filterQuadsLines = (output) => {
@@ -61,6 +63,14 @@ function App() {
     const quadsLines = lines.filter(line => line.includes('Quads'));
     setQuadsLines(quadsLines);
 };
+const filterOutLines = (output) => {
+  const lines = output.split('\n');
+  const filteredLines = lines.filter(line => line.includes('Print Result'));
+
+
+  setOutputpanel(filteredLines);
+};
+
 return (
   <div className="App">
   <a href="https://imgbb.com/"><img src="https://i.ibb.co/BNnLVXn/image-removebg-preview-4.png" alt="image-removebg-preview-4" border="0" className='background-image'/></a>
@@ -70,10 +80,8 @@ return (
               <h2>Source Code</h2>
               <CodeEditor code={code} setCode={setCode} />
           </div>
-          <div className="panel">
-              <h2>Compilation Output</h2>
-              <CompileButton compileCode={compileCode} />
-              <Output output={output} />
+          <div className='panel'>
+          <CompileButton compileCode={compileCode} />
           </div>
           <div className="panel">
               <h2>Semantic Errors</h2>
@@ -83,6 +91,15 @@ return (
                   ))}
               </pre>
           </div>
+          <div className="panel">
+              <h2>Output</h2>
+              <pre>
+                  {outputP.map((error, index) => (
+                      <li key={index}>{error}</li>
+                  ))}
+              </pre>
+          </div>
+          
           <div className="panel">
               <h2>Syntax Errors</h2>
               <pre>
@@ -107,6 +124,11 @@ return (
                   ))}
               </pre>
           </div>
+          <div className="panel">
+              
+              <Output output={output} />
+          </div>
+          
       </div>
   </div>
 );

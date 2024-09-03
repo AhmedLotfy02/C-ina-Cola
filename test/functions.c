@@ -1,5 +1,7 @@
-int x = 2;
+int x2(int a, int b)
+{
 
-// int func(int x)
-// {
-// }
+    print("inside func");
+    return 0;
+}
+x2(1, 2);

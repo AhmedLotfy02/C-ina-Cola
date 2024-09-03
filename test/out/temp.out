@@ -1,0 +1,13 @@
+======================================
+{*inside Rule*} term -> IDENTIFIER  t  : 
+Quads(1) 	PUSH t
+{*inside Function*} checkUndeclared_and_OutOfScope(char* name = t)
+Syntax Error: Variable { t } is not declared before.
+Semantic Error: Variable { t } is Undeclared at line : { 1 }
+{*outside Rule*} term -> IDENTIFIER  t  : 
+{*inside Rule*} expr -> term   : 
+{*outside Rule*} expr -> term   : 
+---------------------------------
+{*inside Rule*} statement ->  expr  : 
+{*outside Rule*} statement ->  expr  : 
+---------------------------------

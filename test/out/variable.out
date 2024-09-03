@@ -1,0 +1,78 @@
+{*inside Rule*} dataType -> INT_DATA_TYPE : 
+{*inside Function*} createIntNode(int value = 0): 
+{*outside Rule*} dataType -> INT_DATA_TYPE : 
+---------------------------------
+======================================
+{*inside Rule*} term -> INTEGER   2  : 
+Quads(1) 	PUSH 2
+{*inside Function*} createIntNode(int value = 2): 
+{*outside Rule*} term -> INTEGER   2  : 
+{*inside Rule*} expr -> term   : 
+{*outside Rule*} expr -> term   : 
+---------------------------------
+{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : 
+{*inside Function*} checkSameScope(char* name = x)
+{*inside Function*} nodeNodeTypeCheck(struct nodeType* node1 = int NodeType, struct nodeType* node2 = int NodeType) :
+{*inside Function*} insert(char* name = x, char* type = int, int isConst = 0, int isInit = 1, int isUsed = 0, int scope = 0 )
+SymbolTable() inserted: x, declared:1, intialized:1, const:0, Symbol table idx:1
+{*inside Function*} castingTo(struct nodeType* term = int NodeType, char *type = string) :
+{*inside Function*} updateIdentifierValue(char* name = x, struct nodeType * node = int NodeType =>Value = {2})
+{*inside Function*} computeIdentifierIndex(char* name = x) :
+{*               *}  => Varible: {x} Index in Symbol_Table= {0}
+{*               *}  => Varible: {x} Scope Level = {0}
+{*inside Function*} castingTo(struct nodeType* term = int NodeType, char *type = int) :
+{*inside Function*} printSymbolTable() 
+SymbolTable() : Name: { x }, Type: { int }, Value: { 2 }, isDeclared: { 1 }, isConst: { 0 }, isInit: { 1 }, isUsed: { 0 }, Symbol table idx: { 0 } , Scope Level: { 0 }
+Quads(1) 	POP x
+
+{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : 
+---------------------------------
+{*inside Rule*} statement ->  decleration  : 
+{*outside Rule*} statement ->  decleration  : 
+---------------------------------
+{*inside Rule*} statements -> statement ';' : 
+---------------------------------
+{*outside Rule*} statements -> statement ';' : 
+{*inside Rule*} dataType -> INT_DATA_TYPE : 
+{*inside Function*} createIntNode(int value = 0): 
+{*outside Rule*} dataType -> INT_DATA_TYPE : 
+---------------------------------
+======================================
+{*inside Rule*} term -> INTEGER   3  : 
+Quads(2) 	PUSH 3
+{*inside Function*} createIntNode(int value = 3): 
+{*outside Rule*} term -> INTEGER   3  : 
+{*inside Rule*} expr -> term   : 
+{*outside Rule*} expr -> term   : 
+---------------------------------
+{*inside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : 
+{*inside Function*} checkSameScope(char* name = kar)
+Variable is not declared
+{*inside Function*} nodeNodeTypeCheck(struct nodeType* node1 = int NodeType, struct nodeType* node2 = int NodeType) :
+{*inside Function*} insert(char* name = kar, char* type = int, int isConst = 0, int isInit = 1, int isUsed = 0, int scope = 0 )
+SymbolTable() inserted: kar, declared:1, intialized:1, const:0, Symbol table idx:2
+{*inside Function*} castingTo(struct nodeType* term = int NodeType, char *type = string) :
+{*inside Function*} updateIdentifierValue(char* name = kar, struct nodeType * node = int NodeType =>Value = {3})
+{*inside Function*} computeIdentifierIndex(char* name = kar) :
+{*               *}  => Varible: {kar} Index in Symbol_Table= {1}
+{*               *}  => Varible: {kar} Scope Level = {0}
+{*inside Function*} castingTo(struct nodeType* term = int NodeType, char *type = int) :
+{*inside Function*} printSymbolTable() 
+SymbolTable() : Name: { x }, Type: { int }, Value: { 2 }, isDeclared: { 1 }, isConst: { 0 }, isInit: { 1 }, isUsed: { 0 }, Symbol table idx: { 0 } , Scope Level: { 0 }
+SymbolTable() : Name: { kar }, Type: { int }, Value: { 3 }, isDeclared: { 1 }, isConst: { 0 }, isInit: { 1 }, isUsed: { 0 }, Symbol table idx: { 1 } , Scope Level: { 0 }
+Quads(2) 	POP kar
+
+{*outside Rule*} decleration -> dataType IDENTIFIER   '='  expr   : 
+---------------------------------
+{*inside Rule*} statement ->  decleration  : 
+{*outside Rule*} statement ->  decleration  : 
+---------------------------------
+{*inside Rule*} statements -> statement ';' : 
+---------------------------------
+{*outside Rule*} statements -> statement ';' : 
+{*inside Rule*} program -> statements program : 
+{*outside Rule*} program -> statements program : 
+---------------------------------
+{*inside Rule*} program -> statements program : 
+{*outside Rule*} program -> statements program : 
+---------------------------------

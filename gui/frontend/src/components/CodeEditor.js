@@ -7,7 +7,7 @@ function CodeEditor({ code, setCode }) {
             onChange={(e) => setCode(e.target.value)}
             rows="20"
             cols="80"
-            placeholder="Enter your C+- code here..."
+            placeholder="Enter your C-ina-cola code here..."
         />
     );
 }

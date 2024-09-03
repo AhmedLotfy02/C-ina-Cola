@@ -371,7 +371,7 @@ term:
         | STRING              {printf("======================================\n");}     {printf("{*inside Rule*} term -> STRING    %s  : \n",$1);} {quadPushString($1);} { $$ = createNode("string"); $$->value.stringVal = strdup($1);printf("{*outside Rule*} term -> STRING    %s  : \n",$1);}
         | TRUE_VAL            {printf("======================================\n");}     {printf("{*inside Rule*} term -> TRUE_VAL   %d     : \n",$1);} {quadPushInt(1);}   { $$ = createNode("bool");   $$->value.boolVal = 1;printf("{*outside Rule*} term -> TRUE_VAL  %d      : \n---------------------------------\n",$1);}
         | FALSE_VAL           {printf("======================================\n");}     {printf("{*inside Rule*} term -> FALSE_VAL  %d     : \n",$1);} {quadPushInt(0);}   { $$ = createNode("bool");   $$->value.boolVal = 0;printf("{*outside Rule*} term -> FALSE_VAL    %d        : \n---------------------------------\n",$1);}
-        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {int Out_of_scope = checkUndeclared_and_OutOfScope($1); if (Out_of_scope == 0 ){int Initialized = checkInitialized($1); if ( Initialized == 1 ) {setUsed($1); $$ = identifierValue($1);} else {$$ = NULL;}} printf("{*outside Rule*} term -> IDENTIFIER  %s  : \n",$1);} 
+        | IDENTIFIER          {printf("======================================\n");}     {printf("{*inside Rule*} term -> IDENTIFIER  %s  : \n",$1);} {quadPushIdentifier($1);} {int Out_of_scope = checkUndeclared_and_OutOfScope($1); if (Out_of_scope == 0 ){int Initialized = checkInitialized($1); if ( Initialized == 1 ) {setUsed($1); $$ = identifierValue($1);} else {$$ = NULL;}}else {$$ = NULL;} printf("{*outside Rule*} term -> IDENTIFIER  %s  : \n",$1);} 
         | '(' term ')'        {printf("======================================\n");}     {printf("{*inside Rule*} term -> '(' term ')'    : \n");} { $$ = $2; printf("{*outside Rule*} term -> '(' term ')'    : \n---------------------------------\n");}
         ;
 
@@ -1023,6 +1023,7 @@ struct nodeType* Negation(struct nodeType* term){
         }
     }
     else{
+        final_result->type = "int";
         final_result->value.intVal = 0;
         Show_Semantic_Error(TYPE_MISMATCH, "");
     }

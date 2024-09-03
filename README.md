@@ -1,4 +1,5 @@
 # 🌟 **{C-ina-Cola} Simple Programming Language Compiler**
+## شجع الكومبيلر المصري
 
 Welcome to the **C-ina-Cola** project! This compiler is designed using the Lex and Yacc compiler-generating packages, developed as part of the CMP(N)403 Languages and Compilers course at Cairo University, Spring 2024.
 
